@@ -167,33 +167,51 @@ input[type=range] { flex:1; height:4px; cursor:pointer; accent-color:var(--gold)
 
 <script>
 // ============================================================
-//  غيّر التاريخ فقط كل يوم
+//  التاريخ يُقرأ تلقائياً من bounds.json
 // ============================================================
-var DATE = "2026-03-18";
-// ============================================================
+var DATE = "loading...";
+var LAYERS = {};
 
-var LAYERS = {
-  sst: {
-    label:"حرارة السطح (C)",
-    img:"tiles/" + DATE + "/sst.png",
-    bounds:[[35.7041,-0.4291],[36.6958,0.9958]],
-  },
-  ssh: {
-    label:"مستوى سطح البحر (m)",
-    img:"tiles/" + DATE + "/ssh.png",
-    bounds:[[35.7187,-0.4062],[36.6562,0.9687]],
-  },
-  uo: {
-    label:"تيار شرق/غرب (m/s)",
-    img:"tiles/" + DATE + "/uo.png",
-    bounds:[[35.75,-0.4166],[36.6666,1.0]],
-  },
-  vo: {
-    label:"تيار شمال/جنوب (m/s)",
-    img:"tiles/" + DATE + "/vo.png",
-    bounds:[[35.75,-0.4166],[36.6666,1.0]],
-  },
-};
+// نقرأ أحدث مجلد من قائمة التواريخ
+fetch('tiles/dates.json')
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    DATE = data.latest;
+    buildLayers();
+    switchLayer('sst', document.querySelector('.layer-tab'));
+    document.getElementById('loading-bar').style.display = 'none';
+  })
+  .catch(function(){
+    // fallback: نجرب التاريخ مباشرة
+    DATE = new Date().toISOString().slice(0,10);
+    buildLayers();
+    switchLayer('sst', document.querySelector('.layer-tab'));
+  });
+
+function buildLayers() {
+  LAYERS = {
+    sst: {
+      label:"حرارة السطح (°C)",
+      img:"tiles/" + DATE + "/sst.png",
+      bounds:[[35.7041,-0.4291],[36.6958,0.9958]],
+    },
+    ssh: {
+      label:"مستوى سطح البحر (m)",
+      img:"tiles/" + DATE + "/ssh.png",
+      bounds:[[35.7187,-0.4062],[36.6562,0.9687]],
+    },
+    uo: {
+      label:"تيار شرق/غرب (m/s)",
+      img:"tiles/" + DATE + "/uo.png",
+      bounds:[[35.75,-0.4166],[36.6666,1.0]],
+    },
+    vo: {
+      label:"تيار شمال/جنوب (m/s)",
+      img:"tiles/" + DATE + "/vo.png",
+      bounds:[[35.75,-0.4166],[36.6666,1.0]],
+    },
+  };
+}
 
 var map = L.map('map',{zoomControl:false,attributionControl:false});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
@@ -282,8 +300,6 @@ function stopGPS(){
   document.getElementById('info-gps').textContent='--';
   gpsActive=false; gpsWatchId=null;
 }
-
-switchLayer('sst', document.querySelector('.layer-tab'));
 
 // ===== طبقة المسارات =====
 var routeLayer = null;
