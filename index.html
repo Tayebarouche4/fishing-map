@@ -182,10 +182,17 @@ fetch('tiles/dates.json')
     document.getElementById('loading-bar').style.display = 'none';
   })
   .catch(function(){
-    // fallback: نجرب التاريخ مباشرة
-    DATE = new Date().toISOString().slice(0,10);
-    buildLayers();
-    switchLayer('sst', document.querySelector('.layer-tab'));
+    // fallback: نجرب آخر تاريخ ممكن بالبحث في المجلدات
+    fetch('tiles/2026-03-22/bounds.json')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        DATE = d.date || "2026-03-22";
+        buildLayers();
+        switchLayer('sst', document.querySelector('.layer-tab'));
+      })
+      .catch(function(){
+        document.getElementById('loading-text').textContent = 'لا توجد بيانات متاحة';
+      });
   });
 
 function buildLayers() {
