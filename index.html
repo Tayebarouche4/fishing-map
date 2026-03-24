@@ -3,77 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام خرائط مستغانم المتكامل</title>
+    <title>نظام مستغانم - GeoJSON</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        :root {
-            --night:#060d18; --gold:#f5a623; --gold2:#ffd166;
-            --green:#06d6a0; --dim:#6a9bb8; --text:#e8f1f8;
-            --border:rgba(100,180,220,0.2);
-        }
+        :root { --night:#060d18; --gold:#f5a623; --green:#06d6a0; --border:rgba(100,180,220,0.2); }
         html,body { width:100%; height:100%; overflow:hidden; font-family:'Tajawal',sans-serif; background:var(--night); }
         #map { width:100%; height:100%; z-index: 1; }
 
-        /* شاشة الدخول الاحترافية */
-        .login-overlay {
-            position:fixed; inset:0; z-index:9999; background:var(--night);
-            display:flex; align-items:center; justify-content:center;
-        }
-        .login-box {
-            background:rgba(17,36,64,.95); border:1px solid var(--gold);
-            border-radius:20px; padding:35px; width:90%; max-width:350px; text-align:center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-        }
-        .login-input {
-            width:100%; padding:15px; background:rgba(255,255,255,0.05);
-            border:1px solid var(--border); border-radius:12px; color:white;
-            text-align:center; margin:20px 0; font-size:1.2rem; outline:none;
-        }
-
-        /* الشريط العلوي مع الطبقات */
+        /* واجهة التحكم العلوية */
         .top-bar {
             position:absolute; top:0; left:0; right:0; z-index:1000;
-            background:linear-gradient(180deg,rgba(6,13,24,.97),rgba(6,13,24,.85));
-            backdrop-filter:blur(10px); border-bottom:1px solid var(--border);
-            padding:10px 14px 8px;
+            background:rgba(6,13,24,0.95); padding:10px; border-bottom:1px solid var(--border);
+            display:none; /* تظهر بعد الدخول */
         }
-        .top-bar-row1 { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-        .brand { display:flex; align-items:center; gap:8px; }
-        .brand-icon {
-            width:34px; height:34px; background:linear-gradient(135deg,var(--gold),#d06b00);
-            border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;
-        }
-        .layer-tabs { display:flex; gap:6px; overflow-x:auto; padding:5px 0; scrollbar-width:none; }
+        .layer-tabs { display:flex; gap:8px; overflow-x:auto; padding:5px 0; }
         .layer-tab {
-            flex-shrink:0; display:flex; align-items:center; gap:6px;
-            background:rgba(255,255,255,.07); border:1px solid var(--border);
-            border-radius:8px; padding:6px 12px; cursor:pointer; color:var(--dim); font-size:0.75rem;
+            flex-shrink:0; background:rgba(255,255,255,0.05); border:1px solid var(--border);
+            border-radius:8px; padding:8px 12px; cursor:pointer; color:#6a9bb8; font-size:0.75rem;
         }
-        .layer-tab.active { background:rgba(245,166,35,.2); border-color:var(--gold); color:var(--gold2); }
+        .layer-tab.active { background:rgba(245,166,35,0.2); border-color:var(--gold); color:var(--gold); }
 
-        /* زر المسارات المميز */
         .route-btn {
-            margin-top:8px; display:inline-flex; align-items:center; gap:6px;
-            background:rgba(6,214,160,0.1); border:1px solid rgba(6,214,160,0.3);
-            border-radius:8px; padding:6px 12px; color:var(--green); font-size:0.75rem; cursor:pointer;
+            display:inline-block; margin-top:10px; padding:8px 15px;
+            background:rgba(6,214,160,0.1); border:1px solid var(--green);
+            color:var(--green); border-radius:8px; font-size:0.8rem; cursor:pointer;
         }
-        .route-btn.active { background:rgba(6,214,160,0.25); border-color:var(--green); }
+        .route-btn.active { background:var(--green); color:var(--night); font-weight:bold; }
 
-        /* الأزرار العائمة */
-        .report-fab {
-            position:fixed; bottom:100px; right:20px; z-index:1001;
-            width:56px; height:56px; background:linear-gradient(135deg,var(--gold),#d06b00);
-            border:none; border-radius:50%; font-size:24px; cursor:pointer;
-            display:none; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        .gps-pulse {
-            width:16px; height:16px; background:var(--green);
-            border-radius:50%; border:2px solid white; animation: pulse 2s infinite;
-        }
-        @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(6,214,160,0.7); } 70% { box-shadow:0 0 0 10px rgba(6,214,160,0); } 100% { box-shadow:0 0 0 0 rgba(6,214,160,0); } }
+        /* شاشة الدخول */
+        .login-overlay { position:fixed; inset:0; z-index:9999; background:var(--night); display:flex; align-items:center; justify-content:center; }
+        .login-box { background:rgba(17,36,64,0.95); border:1px solid var(--gold); border-radius:20px; padding:30px; width:90%; max-width:320px; text-align:center; }
+        .login-input { width:100%; padding:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:white; text-align:center; margin:15px 0; outline:none; }
     </style>
 </head>
 <body>
@@ -82,38 +44,19 @@
 
 <div class="login-overlay" id="login-overlay">
     <div class="login-box">
-        <div style="font-size:50px;">⚓</div>
-        <h2 style="color:white; margin-top:10px;">دليل الصياد</h2>
-        <input type="text" id="login-input" class="login-input" placeholder="أدخل الكود (مثلاً FISHER_01)">
-        <button onclick="doLogin()" style="width:100%; padding:15px; background:var(--gold); border:none; border-radius:12px; font-weight:bold; cursor:pointer;">دخول</button>
-        <div id="login-error" style="color:#ef233c; margin-top:10px; display:none;">❌ كود غير صحيح</div>
+        <h2 style="color:white;">⚓ دخول النظام</h2>
+        <input type="text" id="login-input" class="login-input" placeholder="أدخل الكود">
+        <button onclick="doLogin()" style="width:100%; padding:12px; background:var(--gold); border:none; border-radius:10px; font-weight:bold;">دخول</button>
     </div>
 </div>
 
-<div class="top-bar" id="ui-controls" style="display:none;">
-    <div class="top-bar-row1">
-        <div class="brand">
-            <div class="brand-icon">🎣</div>
-            <div class="brand-text" style="color:white; font-weight:900; font-size:0.9rem;">خريطة مستغانم</div>
-        </div>
-        <div style="display:flex; gap:5px;">
-            <button class="hbtn" id="gps-btn" style="background:rgba(255,255,255,0.1); color:white; border:none; padding:5px 10px; border-radius:5px; font-size:0.7rem;">📍 GPS</button>
-        </div>
-    </div>
-    
+<div class="top-bar" id="top-bar">
     <div class="layer-tabs">
-        <div class="layer-tab active" onclick="switchLayer('sst', this)">🌡️ حرارة</div>
-        <div class="layer-tab" onclick="switchLayer('ssh', this)">🌊 مستوى البحر</div>
-        <div class="layer-tab" onclick="switchLayer('uo', this)">⬅️ تيار E/W</div>
-        <div class="layer-tab" onclick="switchLayer('vo', this)">⬆️ تيار N/S</div>
+        <div class="layer-tab" onclick="toggleOverlay('sst', this)">🌡️ خريطة الحرارة</div>
+        <div class="layer-tab" onclick="toggleOverlay('ssh', this)">🌊 خريطة الموج</div>
     </div>
-
-    <div class="route-btn" id="route-toggle" onclick="toggleRoutes(this)">
-        📍 <span>إظهار المسارات</span>
-    </div>
+    <div class="route-btn" onclick="toggleGeoJSON(this)">🗺️ إظهار المسارات (GeoJSON)</div>
 </div>
-
-<button class="report-fab" id="report-fab" onclick="alert('واجهة التقييم جاهزة')">📋</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
@@ -121,54 +64,57 @@
     var map = L.map('map', {zoomControl:false}).setView([36.2, 0.3], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    var VALID_CODES = ["FISHER_01","FISHER_02","FISHER_03","FISHER_04","FISHER_05"];
-    var gpsMarker, currentUser, routeLayer = null;
+    var overlays = {
+        sst: L.imageOverlay('sst.png', [[35.5, -0.5], [37.0, 1.5]], {opacity: 0.6}),
+        ssh: L.imageOverlay('ssh.png', [[35.5, -0.5], [37.0, 1.5]], {opacity: 0.6})
+    };
+
+    var geojsonLayer = null;
 
     function doLogin() {
         var code = document.getElementById('login-input').value.trim().toUpperCase();
-        if (VALID_CODES.indexOf(code) >= 0) {
-            currentUser = code;
+        if(code.length >= 3) {
             document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('ui-controls').style.display = 'block';
-            document.getElementById('report-fab').style.display = 'flex';
-            startGPS();
-        } else {
-            document.getElementById('login-error').style.display = 'block';
+            document.getElementById('top-bar').style.display = 'block';
         }
     }
 
-    function startGPS() {
-        navigator.geolocation.watchPosition(function(pos) {
-            var lat = pos.coords.latitude;
-            var lon = pos.coords.longitude;
-            var icon = L.divIcon({className:'', html:'<div class="gps-pulse"></div>', iconSize:[16,16]});
-            if(!gpsMarker) {
-                gpsMarker = L.marker([lat, lon], {icon: icon}).addTo(map);
-                map.setView([lat, lon], 12);
-            } else {
-                gpsMarker.setLatLng([lat, lon]);
-            }
-        }, null, {enableHighAccuracy:true});
-    }
-
-    function switchLayer(type, btn) {
-        document.querySelectorAll('.layer-tab').forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
-        console.log("تغيير الطبقة إلى: " + type);
-        // هنا يمكنك استكمال كود L.imageOverlay لربطها ببيانات QGIS الخاصة بك
-    }
-
-    function toggleRoutes(btn) {
-        if (routeLayer) {
-            map.removeLayer(routeLayer);
-            routeLayer = null;
+    // وظيفة تبديل خرائط الصور (الحرارة والموج)
+    function toggleOverlay(type, btn) {
+        if (map.hasLayer(overlays[type])) {
+            map.removeLayer(overlays[type]);
             btn.classList.remove('active');
-            btn.querySelector('span').textContent = "إظهار المسارات";
         } else {
-            // محاكاة تحميل المسارات (يمكنك ربطها بملف GeoJSON الخاص بك)
+            overlays[type].addTo(map);
             btn.classList.add('active');
-            btn.querySelector('span').textContent = "إخفاء المسارات";
-            alert("تم تفعيل طبقة المسارات البحرية لميناء مستغانم");
+        }
+    }
+
+    // وظيفة قراءة ملف GeoJSON وعرض المسارات
+    function toggleGeoJSON(btn) {
+        if (geojsonLayer && map.hasLayer(geojsonLayer)) {
+            map.removeLayer(geojsonLayer);
+            btn.classList.remove('active');
+            btn.textContent = "🗺️ إظهار المسارات (GeoJSON)";
+        } else {
+            btn.textContent = "⏳ جاري التحميل...";
+            
+            // جلب ملف GeoJSON من المجلد (يجب أن يكون الملف باسم rout.geojson في GitHub)
+            fetch('rout.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    geojsonLayer = L.geoJSON(data, {
+                        style: { color: "#06d6a0", weight: 3, opacity: 0.8 }
+                    }).addTo(map);
+                    
+                    btn.classList.add('active');
+                    btn.textContent = "🗺️ إخفاء المسارات";
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("تعذر العثور على ملف rout.geojson في مجلدك");
+                    btn.textContent = "🗺️ إظهار المسارات (GeoJSON)";
+                });
         }
     }
 </script>
