@@ -3,118 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام مستغانم - GeoJSON</title>
+    <title>نظام صيد مستغانم المتكامل</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        :root { --night:#060d18; --gold:#f5a623; --green:#06d6a0; --border:rgba(100,180,220,0.2); }
-        html,body { width:100%; height:100%; overflow:hidden; font-family:'Tajawal',sans-serif; background:var(--night); }
-        #map { width:100%; height:100%; z-index: 1; }
+        * { margin:0; padding:0; box-sizing:border-box; font-family: sans-serif; }
+        body { background: #060d18; color: white; }
+        #map { width:100%; height:100vh; z-index: 1; }
 
-        /* واجهة التحكم العلوية */
-        .top-bar {
-            position:absolute; top:0; left:0; right:0; z-index:1000;
-            background:rgba(6,13,24,0.95); padding:10px; border-bottom:1px solid var(--border);
-            display:none; /* تظهر بعد الدخول */
-        }
-        .layer-tabs { display:flex; gap:8px; overflow-x:auto; padding:5px 0; }
-        .layer-tab {
-            flex-shrink:0; background:rgba(255,255,255,0.05); border:1px solid var(--border);
-            border-radius:8px; padding:8px 12px; cursor:pointer; color:#6a9bb8; font-size:0.75rem;
-        }
-        .layer-tab.active { background:rgba(245,166,35,0.2); border-color:var(--gold); color:var(--gold); }
-
-        .route-btn {
-            display:inline-block; margin-top:10px; padding:8px 15px;
-            background:rgba(6,214,160,0.1); border:1px solid var(--green);
-            color:var(--green); border-radius:8px; font-size:0.8rem; cursor:pointer;
-        }
-        .route-btn.active { background:var(--green); color:var(--night); font-weight:bold; }
+        /* شريط التحكم العلوي */
+        .top-bar { position:absolute; top:0; left:0; right:0; z-index:1000; background:rgba(6,13,24,0.9); padding:10px; display:none; border-bottom:1px solid rgba(245,166,35,0.3); }
+        .layer-btn { background:#112440; color:white; border:1px solid #f5a623; padding:8px 12px; border-radius:5px; cursor:pointer; font-size:12px; margin-left:5px; }
+        .layer-btn.active { background:#f5a623; color:#060d18; font-weight:bold; }
 
         /* شاشة الدخول */
-        .login-overlay { position:fixed; inset:0; z-index:9999; background:var(--night); display:flex; align-items:center; justify-content:center; }
-        .login-box { background:rgba(17,36,64,0.95); border:1px solid var(--gold); border-radius:20px; padding:30px; width:90%; max-width:320px; text-align:center; }
-        .login-input { width:100%; padding:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:white; text-align:center; margin:15px 0; outline:none; }
+        .login-overlay { position:fixed; inset:0; z-index:9999; background:#060d18; display:flex; align-items:center; justify-content:center; }
+        .login-box { background:#112440; border:1px solid #f5a623; border-radius:15px; padding:25px; text-align:center; width:90%; max-width:320px; }
+        .login-input { width:100%; padding:12px; margin:15px 0; border-radius:8px; border:none; text-align:center; }
+
+        /* زر التقييم العائم */
+        .report-fab { position:fixed; bottom:30px; right:20px; z-index:1001; width:60px; height:60px; background:#f5a623; border-radius:50%; display:none; align-items:center; justify-content:center; border:none; font-size:24px; box-shadow:0 4px 15px rgba(0,0,0,0.5); cursor:pointer; }
+        
+        .gps-dot { width:15px; height:15px; background:#06d6a0; border-radius:50%; border:2px solid white; box-shadow:0 0 10px #06d6a0; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
 
-<div class="login-overlay" id="login-overlay">
+<div id="login-overlay" class="login-overlay">
     <div class="login-box">
-        <h2 style="color:white;">⚓ دخول النظام</h2>
-        <input type="text" id="login-input" class="login-input" placeholder="أدخل الكود">
-        <button onclick="doLogin()" style="width:100%; padding:12px; background:var(--gold); border:none; border-radius:10px; font-weight:bold;">دخول</button>
+        <h2 style="color:#f5a623;">⚓ دخول النظام</h2>
+        <input type="text" id="login-input" class="login-input" placeholder="أدخل الكود (FISHER_01)">
+        <button onclick="doLogin()" style="width:100%; padding:12px; background:#f5a623; border:none; border-radius:8px; font-weight:bold;">دخول</button>
     </div>
 </div>
 
-<div class="top-bar" id="top-bar">
-    <div class="layer-tabs">
-        <div class="layer-tab" onclick="toggleOverlay('sst', this)">🌡️ خريطة الحرارة</div>
-        <div class="layer-tab" onclick="toggleOverlay('ssh', this)">🌊 خريطة الموج</div>
-    </div>
-    <div class="route-btn" onclick="toggleGeoJSON(this)">🗺️ إظهار المسارات (GeoJSON)</div>
+<div id="top-bar" class="top-bar">
+    <button class="layer-btn" onclick="toggleLayer('sst', this)">🌡️ حرارة</button>
+    <button class="layer-btn" onclick="toggleLayer('ssh', this)">🌊 موج</button>
+    <button class="layer-btn" onclick="loadGeoJSON(this)">🗺️ المسارات</button>
 </div>
+
+<button id="report-fab" class="report-fab" onclick="alert('واجهة التقييم قيد التحميل...')">📋</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <script>
+    // --- 1. إعداد الخريطة ---
     var map = L.map('map', {zoomControl:false}).setView([36.2, 0.3], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    var overlays = {
-        sst: L.imageOverlay('sst.png', [[35.5, -0.5], [37.0, 1.5]], {opacity: 0.6}),
-        ssh: L.imageOverlay('ssh.png', [[35.5, -0.5], [37.0, 1.5]], {opacity: 0.6})
-    };
-
+    var sstLayer = L.imageOverlay('sst.png', [[35.5, -0.5], [37.0, 1.5]], {opacity: 0.6});
+    var sshLayer = L.imageOverlay('ssh.png', [[35.5, -0.5], [37.0, 1.5]], {opacity: 0.6});
     var geojsonLayer = null;
+    var gpsMarker, gpsLat, gpsLon;
 
+    // --- 2. نظام الدخول ---
     function doLogin() {
         var code = document.getElementById('login-input').value.trim().toUpperCase();
-        if(code.length >= 3) {
+        if(code.length > 2) {
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('top-bar').style.display = 'block';
+            document.getElementById('report-fab').style.display = 'flex';
+            startGPS();
         }
     }
 
-    // وظيفة تبديل خرائط الصور (الحرارة والموج)
-    function toggleOverlay(type, btn) {
-        if (map.hasLayer(overlays[type])) {
-            map.removeLayer(overlays[type]);
+    // --- 3. نظام الـ GPS ---
+    function startGPS() {
+        navigator.geolocation.watchPosition(function(pos) {
+            gpsLat = pos.coords.latitude;
+            gpsLon = pos.coords.longitude;
+            if(!gpsMarker) {
+                gpsMarker = L.marker([gpsLat, gpsLon], {
+                    icon: L.divIcon({className:'', html:'<div class="gps-dot"></div>'})
+                }).addTo(map);
+                map.setView([gpsLat, gpsLon], 12);
+            } else {
+                gpsMarker.setLatLng([gpsLat, gpsLon]);
+            }
+        }, null, {enableHighAccuracy: true});
+    }
+
+    // --- 4. التحكم بالخرائط (SST/SSH) ---
+    function toggleLayer(type, btn) {
+        var layer = (type === 'sst') ? sstLayer : sshLayer;
+        if (map.hasLayer(layer)) {
+            map.removeLayer(layer);
             btn.classList.remove('active');
         } else {
-            overlays[type].addTo(map);
+            layer.addTo(map);
             btn.classList.add('active');
         }
     }
 
-    // وظيفة قراءة ملف GeoJSON وعرض المسارات
-    function toggleGeoJSON(btn) {
+    // --- 5. تحميل المسارات (GeoJSON) ---
+    function loadGeoJSON(btn) {
         if (geojsonLayer && map.hasLayer(geojsonLayer)) {
             map.removeLayer(geojsonLayer);
             btn.classList.remove('active');
-            btn.textContent = "🗺️ إظهار المسارات (GeoJSON)";
         } else {
-            btn.textContent = "⏳ جاري التحميل...";
-            
-            // جلب ملف GeoJSON من المجلد (يجب أن يكون الملف باسم rout.geojson في GitHub)
             fetch('rout.geojson')
-                .then(response => response.json())
+                .then(res => res.json())
                 .then(data => {
-                    geojsonLayer = L.geoJSON(data, {
-                        style: { color: "#06d6a0", weight: 3, opacity: 0.8 }
-                    }).addTo(map);
-                    
+                    geojsonLayer = L.geoJSON(data, {style: {color: '#06d6a0', weight: 3}}).addTo(map);
                     btn.classList.add('active');
-                    btn.textContent = "🗺️ إخفاء المسارات";
                 })
-                .catch(err => {
-                    console.error(err);
-                    alert("تعذر العثور على ملف rout.geojson في مجلدك");
-                    btn.textContent = "🗺️ إظهار المسارات (GeoJSON)";
-                });
+                .catch(err => alert("تأكد من وجود ملف rout.geojson في GitHub"));
         }
     }
 </script>
