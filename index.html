@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>خريطة صياد مستغانم</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --night:#060d18; --gold:#f5a623; --green:#06d6a0; --text:#e8f1f8;
+            --border:rgba(100,180,220,0.2);
+        }
+        html,body { width:100%; height:100%; overflow:hidden; font-family:'Tajawal',sans-serif; background:var(--night); }
+        #map { width:100%; height:100%; z-index: 1; }
+        
+        .login-overlay { position:fixed; inset:0; z-index:9999; background:var(--night); display:flex; align-items:center; justify-content:center; }
+        .login-box { background:rgba(17,36,64,0.95); border:1px solid var(--gold); border-radius:20px; padding:30px; width:90%; max-width:320px; text-align:center; }
+        .login-input { width:100%; padding:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:white; text-align:center; margin:15px 0; font-size:18px; outline:none; }
+        
+        .top-bar { position:absolute; top:0; left:0; right:0; z-index:1000; background:rgba(6,13,24,0.9); padding:10px 15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+        .gps-status { color:white; font-size:12px; padding:5px 10px; background:rgba(255,255,255,0.1); border-radius:5px; }
+
+        .report-fab { position:fixed; bottom:30px; right:20px; z-index:2000; width:60px; height:60px; background:var(--gold); border:none; border-radius:50%; font-size:24px; display:none; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(0,0,0,0.5); cursor:pointer; }
+        
+        .gps-dot { width:16px; height:16px; background:var(--green); border-radius:50%; border:2px solid white; box-shadow:0 0 10px var(--green); }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="login-overlay" id="login-overlay">
+    <div class="login-box">
+        <h2 style="color:white; margin-bottom:15px;">⚓ دخول الصياد</h2>
+        <input type="text" id="login-input" class="login-input" placeholder="أدخل كودك (مثلاً FISHER_01)">
+        <button onclick="doLogin()" style="width:100%; background:var(--gold); border:none; padding:12px; border-radius:10px; font-weight:bold; cursor:pointer;">دخول النظام</button>
+    </div>
+</div>
+
+<div class="top-bar">
+    <div style="color:var(--gold); font-weight:900;">خريطة مستغانم</div>
+    <div id="gps-status" class="gps-status">📍 بانتظار الموقع...</div>
+</div>
+
+<button class="report-fab" id="report-fab" onclick="sendReport()">📋</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<script>
+    var map = L.map('map', {zoomControl:false}).setView([36.2, 0.3], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    var gpsMarker, gpsLat, gpsLon, currentUser;
+    var SHEET_URL = "https://script.google.com/macros/s/AKfycbxWLFTF4n-EJLW_ew84c8evi2yv_3KG8k0SYnO8MHk/exec";
+
+    function doLogin() {
+        var code = document.getElementById('login-input').value.trim();
+        if(code.length < 2) return alert("يرجى إدخال الكود");
+        currentUser = code;
+        document.getElementById('login-overlay').style.display = 'none';
+        startGPS();
+    }
+
+    function startGPS() {
+        if (!navigator.geolocation) return alert("GPS غير مدعوم");
+        
+        navigator.geolocation.watchPosition(function(pos) {
+            gpsLat = pos.coords.latitude;
+            gpsLon = pos.coords.longitude;
+            
+            if (!gpsMarker) {
+                gpsMarker = L.marker([gpsLat, gpsLon], {
+                    icon: L.divIcon({className:'', html:'<div class="gps-dot"></div>'})
+                }).addTo(map);
+                map.setView([gpsLat, gpsLon], 14);
+            } else {
+                gpsMarker.setLatLng([gpsLat, gpsLon]);
+            }
+            
+            document.getElementById('gps-status').textContent = "✅ الموقع نشط";
+            document.getElementById('gps-status').style.color = "#06d6a0";
+            document.getElementById('report-fab').style.display = 'flex';
+        }, function(err) {
+            document.getElementById('gps-status').textContent = "❌ مشكل في الإشارة";
+        }, { enableHighAccuracy: true });
+    }
+
+    function sendReport() {
+        if(!gpsLat) return alert("انتظر تحديد الموقع");
+        alert("جاري الإرسال للجدول (الأعمدة 5a, 6a)...");
+        
+        var payload = {
+            code: currentUser,
+            lat: gpsLat.toFixed(6),
+            lon: gpsLon.toFixed(6),
+            date: new Date().toLocaleDateString('fr-DZ')
+        };
+
+        fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
+        .then(() => alert("✅ تم الإرسال بنجاح!"))
+        .catch(() => alert("❌ فشل الاتصال"));
+    }
+</script>
+</body>
+</html>
