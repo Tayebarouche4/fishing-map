@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>خريطة مستغانم - النسخة المستقرة</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Tajawal', sans-serif; background:#060d18; }
+        #map { width:100%; height:100vh; z-index: 1; }
+        
+        /* زر الجي بي اس العلوي */
+        .top-ui { position:absolute; top:15px; left:15px; right:15px; z-index:1000; display:flex; justify-content:space-between; }
+        .hbtn { background:rgba(6,13,24,0.9); border:1px solid rgba(245,166,35,0.4); color:white; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold; }
+        .gps-active { border-color:#06d6a0; color:#06d6a0; }
+
+        /* زر الإرسال (الأيقونة العائمة) */
+        .fab { position:fixed; bottom:30px; right:20px; z-index:2000; width:60px; height:60px; background:#f5a623; border:none; border-radius:50%; font-size:24px; display:none; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(0,0,0,0.4); }
+
+        /* نافذة الإرسال */
+        #report-box { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:3000; background:#060d18; border:2px solid #f5a623; border-radius:15px; padding:20px; width:85%; max-width:300px; display:none; text-align:center; color:white; }
+        .send-btn { background:#f5a623; color:#060d18; border:none; padding:12px; width:100%; border-radius:8px; font-weight:bold; margin-top:10px; cursor:pointer; }
+        
+        .gps-dot { width:15px; height:15px; background:#06d6a0; border-radius:50%; border:2px solid white; box-shadow:0 0 10px #06d6a0; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="top-ui">
+    <div style="color:#f5a623; font-weight:bold; background:rgba(0,0,0,0.5); padding:5px 10px; border-radius:5px;">⚓ مستغانم</div>
+    <button class="hbtn" id="gps-btn" onclick="startGPS()">📍 تفعيل الموقع</button>
+</div>
+
+<button class="fab" id="fab" onclick="showBox()">📋</button>
+
+<div id="report-box">
+    <h3 style="margin-bottom:15px;">إرسال تقرير الصيد</h3>
+    <button class="send-btn" onclick="sendToSheet()">تأكيد الإرسال للجدول</button>
+    <button class="hbtn" style="width:100%; margin-top:10px;" onclick="hideBox()">إلغاء</button>
+    <p id="status" style="margin-top:10px; font-size:12px;"></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+    var map = L.map('map', {zoomControl:false}).setView([36.2, 0.3], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    var gpsMarker, gpsLat, gpsLon, gpsActive = false;
+    var scriptURL = "https://script.google.com/macros/s/AKfycbxWLFTF4n-EJLW_ew84c8evi2yv_3KG8k0SYnO8MHk/exec";
+
+    function startGPS() {
+        if (!navigator.geolocation) return alert("الجي بي اس غير مدعوم");
+        
+        document.getElementById('gps-btn').textContent = "🔄 جاري التحديد...";
+
+        // العودة للإعدادات الأصلية التي كانت تعمل عندك
+        navigator.geolocation.watchPosition(function(pos) {
+            gpsLat = pos.coords.latitude;
+            gpsLon = pos.coords.longitude;
+            
+            if (!gpsMarker) {
+                gpsMarker = L.marker([gpsLat, gpsLon], {
+                    icon: L.divIcon({className:'', html:'<div class="gps-dot"></div>'})
+                }).addTo(map);
+                map.setView([gpsLat, gpsLon], 14);
+            } else {
+                gpsMarker.setLatLng([gpsLat, gpsLon]);
+            }
+
+            gpsActive = true;
+            document.getElementById('gps-btn').textContent = "✅ الموقع نشط";
+            document.getElementById('gps-btn').classList.add('gps-active');
+            document.getElementById('fab').style.display = 'flex'; // إظهار زر التقرير فقط عند نجاح الموقع
+        }, function(err) {
+            alert("خطأ: يرجى تفعيل الموقع في الهاتف.");
+            document.getElementById('gps-btn').textContent = "❌ معطل";
+        }, { enableHighAccuracy: true });
+    }
+
+    function showBox() { document.getElementById('report-box').style.display = 'block'; }
+    function hideBox() { document.getElementById('report-box').style.display = 'none'; }
+
+    function sendToSheet() {
+        if(!gpsActive) return alert("انتظر تحديد موقعك");
+        document.getElementById('status').textContent = "جاري الإرسال...";
+        
+        fetch(scriptURL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({
+                lat: gpsLat.toFixed(6),
+                lon: gpsLon.toFixed(6),
+                boat_id: "قارب-مستغانم",
+                status: "نشط"
+            })
+        }).then(() => {
+            document.getElementById('status').textContent = "✅ تم بنجاح!";
+            setTimeout(hideBox, 2000);
+        }).catch(() => alert("خطأ في الإنترنت"));
+    }
+</script>
+</body>
+</html>
