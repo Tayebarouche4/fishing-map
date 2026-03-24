@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>خريطة مستغانم</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: sans-serif; background:#060d18; }
+        #map { width:100%; height:100vh; z-index:1; }
+        
+        /* شاشة الدخول بالكود */
+        #login-overlay { position:fixed; inset:0; z-index:9999; background:#060d18; display:flex; align-items:center; justify-content:center; }
+        .login-box { background:#112440; padding:25px; border-radius:15px; border:1px solid #f5a623; text-align:center; width:90%; max-width:320px; color:white; }
+        
+        /* أزرار التحكم */
+        .ui-top { position:absolute; top:10px; left:10px; right:10px; z-index:1000; display:flex; justify-content:space-between; }
+        .btn { background:#f5a623; color:#060d18; border:none; padding:10px 15px; border-radius:8px; font-weight:bold; cursor:pointer; }
+        
+        .report-btn { position:fixed; bottom:30px; right:20px; z-index:2000; width:60px; height:60px; border-radius:50%; background:#f5a623; border:none; font-size:24px; display:none; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
+        .gps-dot { width:15px; height:15px; background:#06d6a0; border-radius:50%; border:2px solid white; box-shadow:0 0 10px #06d6a0; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="login-overlay">
+    <div class="login-box">
+        <h2 style="color:#f5a623; margin-bottom:15px;">⚓ نظام قوارب مستغانم</h2>
+        <input type="text" id="login-input" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; text-align:center;" placeholder="أدخل الكود الخاص بك">
+        <button class="btn" style="width:100%" onclick="startSystem()">دخول</button>
+    </div>
+</div>
+
+<div class="ui-top">
+    <div id="gps-info" style="background:rgba(0,0,0,0.7); padding:8px; border-radius:8px; font-size:12px; color:white;">📍 بانتظار الموقع...</div>
+</div>
+
+<button class="report-btn" id="report-fab" onclick="sendToSheet()">📋</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<script>
+    var map = L.map('map', {zoomControl:false}).setView([36.2, 0.3], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    var gpsMarker, gpsLat, gpsLon, currentUser;
+    var scriptURL = "https://script.google.com/macros/s/AKfycbxWLFTF4n-EJLW_ew84c8evi2yv_3KG8k0SYnO8MHk/exec";
+
+    function startSystem() {
+        var code = document.getElementById('login-input').value.trim();
+        if(code.length < 3) return alert("يرجى إدخال كود صحيح");
+        currentUser = code;
+        document.getElementById('login-overlay').style.display = 'none';
+        
+        // تشغيل الـ GPS فور الدخول بنفس الكود الذي كان يعمل عندك
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(function(pos) {
+                gpsLat = pos.coords.latitude;
+                gpsLon = pos.coords.longitude;
+                
+                if (!gpsMarker) {
+                    gpsMarker = L.marker([gpsLat, gpsLon], {
+                        icon: L.divIcon({className:'', html:'<div class="gps-dot"></div>'})
+                    }).addTo(map);
+                    map.setView([gpsLat, gpsLon], 14);
+                } else {
+                    gpsMarker.setLatLng([gpsLat, gpsLon]);
+                }
+                
+                document.getElementById('gps-info').innerHTML = "✅ الإشارة نشطة";
+                document.getElementById('gps-info').style.color = "#06d6a0";
+                document.getElementById('report-fab').style.display = 'flex';
+            }, function(err) {
+                document.getElementById('gps-info').innerHTML = "❌ خطأ في الإشارة";
+            }, { enableHighAccuracy: true });
+        }
+    }
+
+    function sendToSheet() {
+        if(!gpsLat) return alert("حدد الموقع أولاً");
+        var btn = document.getElementById('report-fab');
+        btn.innerHTML = "⌛";
+        
+        var payload = {
+            code: currentUser,
+            lat: gpsLat.toFixed(6),
+            lon: gpsLon.toFixed(6),
+            date: new Date().toLocaleDateString('fr-DZ')
+        };
+
+        // إرسال البيانات للجدول العربي (أعمدة 5a, 6a)
+        fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
+        .then(() => {
+            alert("تم الإرسال بنجاح!");
+            btn.innerHTML = "📋";
+        }).catch(() => {
+            alert("خطأ في الشبكة");
+            btn.innerHTML = "📋";
+        });
+    }
+</script>
+</body>
+</html>
