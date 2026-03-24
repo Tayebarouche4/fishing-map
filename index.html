@@ -3,33 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>خريطة مستغانم - النظام المتكامل</title>
+    <title>نظام صيادي مستغانم</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        :root { --night:#060d18; --gold:#f5a623; --green:#06d6a0; --text:#e8f1f8; --border:rgba(100,180,220,0.2); }
-        html,body { width:100%; height:100%; overflow:hidden; font-family:'Tajawal',sans-serif; background:var(--night); }
-        #map { width:100%; height:100%; z-index: 1; }
+        body { font-family:'Tajawal', sans-serif; background:#060d18; color:#e8f1f8; overflow:hidden; }
+        #map { width:100%; height:100vh; z-index: 1; }
         
-        /* الواجهة العلوية */
-        .top-bar { position:absolute; top:0; left:0; right:0; z-index:1000; background:rgba(6,13,24,0.9); padding:10px 15px; border-bottom:1px solid var(--border); backdrop-filter:blur(10px); display:flex; justify-content:space-between; align-items:center; }
-        .hbtn { background:rgba(255,255,255,0.1); border:1px solid var(--border); color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:13px; }
-        .gps-on { border-color:var(--green); color:var(--green); background:rgba(6,214,160,0.1); }
+        /* شاشة الدخول بالكود */
+        .login-overlay { position:fixed; inset:0; z-index:9999; background:#060d18; display:flex; align-items:center; justify-content:center; }
+        .login-box { background:#112440; padding:30px; border-radius:20px; border:1px solid #f5a623; text-align:center; width:90%; max-width:320px; }
+        .login-input { width:100%; padding:12px; margin:15px 0; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:white; text-align:center; font-size:18px; }
+        .btn-main { background:#f5a623; color:#060d18; border:none; padding:12px; width:100%; border-radius:10px; font-weight:bold; cursor:pointer; }
 
-        /* شاشة الدخول بالكود (التي طلبت الحفاظ عليها) */
-        .login-overlay { position:absolute; inset:0; z-index:3000; background:var(--night); display:flex; align-items:center; justify-content:center; padding:20px; }
-        .login-box { background:rgba(17,36,64,0.95); border:1px solid var(--gold); border-radius:20px; padding:30px; width:100%; max-width:320px; text-align:center; }
-        .login-input { width:100%; padding:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:white; text-align:center; margin:15px 0; font-size:18px; outline:none; }
+        /* الواجهة العلوية */
+        .top-ui { position:absolute; top:10px; left:10px; right:10px; z-index:1000; display:flex; justify-content:space-between; align-items:center; }
+        .gps-status { background:rgba(6,13,24,0.9); padding:8px 15px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); font-size:12px; }
         
         /* زر الإرسال العائم */
-        .report-fab { position:absolute; bottom:30px; right:20px; z-index:2000; width:60px; height:60px; background:var(--gold); border:none; border-radius:50%; font-size:24px; display:none; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(0,0,0,0.5); cursor:pointer; }
+        .fab { position:fixed; bottom:30px; right:20px; z-index:2000; width:60px; height:60px; background:#f5a623; border:none; border-radius:50%; font-size:24px; display:none; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(0,0,0,0.5); cursor:pointer; }
         
-        /* نافذة التقرير */
-        #report-panel { position:fixed; bottom:0; left:0; right:0; z-index:2500; background:var(--night); border-top:2px solid var(--gold); padding:20px; transform:translateY(100%); transition:0.3s; text-align:center; }
-        #report-panel.active { transform:translateY(0); }
-        
-        .gps-dot { width:16px; height:16px; background:var(--green); border-radius:50%; border:2px solid white; box-shadow:0 0 10px var(--green); }
+        .gps-dot { width:15px; height:15px; background:#06d6a0; border-radius:50%; border:2px solid white; box-shadow:0 0 10px #06d6a0; }
     </style>
 </head>
 <body>
@@ -38,120 +33,92 @@
 
 <div class="login-overlay" id="login-overlay">
     <div class="login-box">
-        <div style="font-size:45px;">⚓</div>
-        <h2 style="color:white; margin:10px 0;">نظام قوارب مستغانم</h2>
-        <p style="color:var(--text); font-size:14px;">يرجى إدخال الكود الخاص بك للمتابعة</p>
-        <input type="text" id="login-input" class="login-input" placeholder="مثال: FISHER_01" oninput="this.value=this.value.toUpperCase()">
-        <button class="hbtn" style="width:100%; background:var(--gold); color:var(--night); font-weight:bold; padding:12px;" onclick="doLogin()">دخول النظام</button>
+        <h2 style="color:#f5a623;">⚓ دخول النظام</h2>
+        <input type="text" id="login-input" class="login-input" placeholder="أدخل كود الصياد">
+        <button class="btn-main" onclick="initSystem()">دخول</button>
     </div>
 </div>
 
-<div class="top-bar">
-    <div style="color:var(--gold); font-weight:900;">خريطة مستغانم</div>
-    <button class="hbtn" id="gps-btn" onclick="toggleGPS()">📍 تفعيل الموقع</button>
+<div class="top-ui">
+    <div style="font-weight:bold; color:#f5a623;">خريطة مستغانم</div>
+    <div class="gps-status" id="gps-label">📍 بانتظار الموقع...</div>
 </div>
 
-<button class="report-fab" id="report-fab" onclick="openReport()">📋</button>
-
-<div id="report-panel">
-    <h3 style="color:white; margin-bottom:15px;">إرسال تقرير الصيد للجدول</h3>
-    <button class="hbtn" style="width:100%; background:var(--gold); color:var(--night); font-weight:bold; margin-bottom:10px;" onclick="sendToSheet()">تأكيد الإرسال (5a, 6a)</button>
-    <button class="hbtn" style="width:100%;" onclick="closeReport()">إلغاء</button>
-    <div id="status-msg" style="margin-top:10px; color:var(--green); font-size:13px;"></div>
-</div>
+<button class="fab" id="fab" onclick="sendReport()">📋 إرسال الموقع</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-    // الإعدادات (الرابط الخاص بك)
-    var SHEET_URL = "https://script.google.com/macros/s/AKfycbxWLFTF4n-EJLW_ew84c8evi2yv_3KG8k0SYnO8MHk/exec";
-    var map, gpsMarker, gpsWatchId, gpsActive = false;
-    var currentUser = null;
-    var gpsLat, gpsLon;
-
-    // 1. تشغيل الخريطة فوراً
-    map = L.map('map', {zoomControl:false}).setView([35.9, 0.1], 10);
+    var map = L.map('map', {zoomControl:false}).setView([36.2, 0.3], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    // 2. وظيفة الدخول بالكود (التي طلبت الحفاظ عليها)
-    function doLogin() {
+    var gpsMarker, gpsLat, gpsLon, currentUser;
+    var scriptURL = "https://script.google.com/macros/s/AKfycbxWLFTF4n-EJLW_ew84c8evi2yv_3KG8k0SYnO8MHk/exec";
+
+    function initSystem() {
         var code = document.getElementById('login-input').value.trim();
-        if(code.length >= 3) {
-            currentUser = code;
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('report-fab').style.display = 'flex';
-            // تشغيل الجي بي اس آلياً بعد الدخول كما كان سابقاً
-            startGPS();
+        if(code.length < 3) return alert("يرجى إدخال كود صحيح");
+        
+        currentUser = code;
+        document.getElementById('login-overlay').style.display = 'none';
+        
+        // تشغيل الجي بي اس بأبسط كود ممكن لضمان العمل
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(successGPS, errorGPS, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
         } else {
-            alert("يرجى إدخال كود القارب بشكل صحيح");
+            alert("هاتفك لا يدعم تحديد الموقع");
         }
     }
 
-    // 3. وظائف الـ GPS (النسخة المستقرة)
-    function toggleGPS() { gpsActive ? stopGPS() : startGPS(); }
-
-    function startGPS() {
-        if (!navigator.geolocation) return alert("متصفحك لا يدعم الجي بي اس");
+    function successGPS(pos) {
+        gpsLat = pos.coords.latitude;
+        gpsLon = pos.coords.longitude;
         
-        var btn = document.getElementById('gps-btn');
-        btn.textContent = "🔄 جاري التحديد...";
-
-        gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
-            gpsLat = pos.coords.latitude;
-            gpsLon = pos.coords.longitude;
-            
-            if (!gpsMarker) {
-                gpsMarker = L.marker([gpsLat, gpsLon], {
-                    icon: L.divIcon({className:'', html:'<div class="gps-dot"></div>'})
-                }).addTo(map);
-                map.setView([gpsLat, gpsLon], 14);
-            } else {
-                gpsMarker.setLatLng([gpsLat, gpsLon]);
-            }
-            
-            gpsActive = true;
-            btn.textContent = "✅ الموقع نشط";
-            btn.classList.add('gps-on');
-        }, function(err) {
-            console.error("عطل جي بي اس:", err.message);
-            btn.textContent = "📍 الموقع معطل";
-            // محاولة إعادة تشغيل إذا كان العطل بسبب الوقت فقط
-            if(err.code === 3) setTimeout(startGPS, 3000);
-        }, { enableHighAccuracy: true, timeout: 15000 });
+        if (!gpsMarker) {
+            gpsMarker = L.marker([gpsLat, gpsLon], {
+                icon: L.divIcon({className:'', html:'<div class="gps-dot"></div>'})
+            }).addTo(map);
+            map.setView([gpsLat, gpsLon], 14);
+        } else {
+            gpsMarker.setLatLng([gpsLat, gpsLon]);
+        }
+        
+        document.getElementById('gps-label').innerHTML = "✅ الموقع نشط";
+        document.getElementById('gps-label').style.color = "#06d6a0";
+        document.getElementById('fab').style.display = 'flex';
     }
 
-    function stopGPS() {
-        if(gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
-        if(gpsMarker) map.removeLayer(gpsMarker);
-        document.getElementById('gps-btn').textContent = "📍 تفعيل الموقع";
-        document.getElementById('gps-btn').classList.remove('gps-on');
-        gpsActive = false;
-        gpsMarker = null;
+    function errorGPS(err) {
+        console.warn(err);
+        document.getElementById('gps-label').innerHTML = "❌ خطأ في الإشارة";
+        document.getElementById('gps-label').style.color = "#ff4d4d";
     }
 
-    // 4. وظائف التقارير والجدول
-    function openReport() { document.getElementById('report-panel').classList.add('active'); }
-    function closeReport() { document.getElementById('report-panel').classList.remove('active'); }
-
-    function sendToSheet() {
-        if(!gpsActive) return alert("يرجى تفعيل الموقع أولاً لتسجيل الإحداثيات");
+    function sendReport() {
+        if(!gpsLat) return alert("لم يتم تحديد الموقع بعد");
         
-        var msg = document.getElementById('status-msg');
-        msg.textContent = "جاري الإرسال للجدول العربي...";
-
+        var btn = document.getElementById('fab');
+        btn.innerHTML = "🔄...";
+        
         var data = {
-            boat_id: currentUser,
+            code: currentUser,
             lat: gpsLat.toFixed(6),
             lon: gpsLon.toFixed(6),
-            status: "صيد نشط",
+            status: "نشط",
             date: new Date().toLocaleDateString('fr-DZ')
         };
 
-        fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) })
+        fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) })
         .then(() => {
-            msg.textContent = "✅ تم تسجيل موقعك في الجدول بنجاح!";
-            setTimeout(closeReport, 2500);
-        }).catch(() => {
-            msg.textContent = "❌ فشل الإرسال، تحقق من الإنترنت";
+            alert("تم إرسال موقعك للجدول العربي بنجاح (الأعمدة 5a, 6a)");
+            btn.innerHTML = "📋";
+        })
+        .catch(() => {
+            alert("خطأ في الشبكة");
+            btn.innerHTML = "📋";
         });
     }
 </script>
