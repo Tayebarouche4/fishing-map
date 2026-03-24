@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>خريطة الصياد التفاعلية</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* جميع التنسيقات الخاصة بك تركتها كما هي لضمان التصميم الجميل */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --night:#060d18; --gold:#f5a623; --gold2:#ffd166;
+            --green:#06d6a0; --dim:#6a9bb8; --text:#e8f1f8;
+            --border:rgba(100,180,220,0.2);
+        }
+        html,body { width:100%; height:100%; overflow:hidden; font-family:'Tajawal',sans-serif; }
+        #map { width:100%; height:100%; z-index: 1; }
+        .top-bar { position:absolute; top:0; left:0; right:0; z-index:1000; background:linear-gradient(180deg,rgba(6,13,24,.97),rgba(6,13,24,.85)); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); padding:10px 14px 8px; }
+        .brand { display:flex; align-items:center; gap:8px; }
+        .brand-icon { width:34px; height:34px; background:linear-gradient(135deg,var(--gold),#d06b00); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+        .brand-text { font-size:.95rem; font-weight:900; color:var(--text); }
+        .header-btns { display:flex; gap:6px; }
+        .hbtn { background:rgba(255,255,255,.08); border:1px solid var(--border); color:var(--text); font-family:'Tajawal',sans-serif; font-size:.72rem; padding:5px 10px; border-radius:8px; cursor:pointer; }
+        .hbtn.gps-on { background:rgba(6,214,160,.2); border-color:var(--green); color:var(--green); }
+        .report-fab { position:absolute; bottom:85px; right:14px; z-index:2000; width:52px; height:52px; background:linear-gradient(135deg,var(--gold),#d06b00); border:none; border-radius:50%; cursor:pointer; font-size:1.4rem; display:none; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(245,166,35,.5); }
+        .gps-pulse { width:18px; height:18px; background:var(--green); border-radius:50%; border:3px solid white; animation:gpsPulse 2s infinite; }
+        @keyframes gpsPulse { 0% { box-shadow:0 0 0 0 rgba(6,214,160,.6); } 70% { box-shadow:0 0 0 12px rgba(6,214,160,0); } 100% { box-shadow:0 0 0 0 rgba(6,214,160,0); } }
+        .login-overlay { position:absolute; inset:0; z-index:3000; background:rgba(6,13,24,.97); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+        .login-box { background:rgba(17,36,64,.9); border:1px solid var(--border); border-radius:18px; padding:28px 24px; width:100%; max-width:340px; text-align:center; }
+        .login-input { width:100%; padding:12px 14px; background:rgba(255,255,255,.08); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:1.1rem; text-align:center; margin-bottom:12px; outline:none; }
+        .login-btn { width:100%; padding:12px; background:linear-gradient(135deg,var(--gold),#d06b00); border:none; border-radius:10px; color:var(--night); font-weight:700; cursor:pointer; }
+        .rating-panel { position:absolute; bottom:0; left:0; right:0; z-index:2500; background:linear-gradient(0deg,rgba(6,13,24,.99),rgba(11,26,46,.97)); border-top:2px solid var(--gold); border-radius:20px 20px 0 0; padding:18px 16px 28px; transform:translateY(100%); transition:transform .3s ease; }
+        .rating-panel.open { transform:translateY(0); }
+        /* أضف بقية التنسيقات الخاصة بك هنا إذا لم تكن موجودة */
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-icon">🎣</div>
+    <div class="login-title">دليل الصياد</div>
+    <div class="login-sub">أدخل كودك الخاص للوصول إلى الخريطة وإرسال تقاريرك</div>
+    <input class="login-input" id="login-input" type="text" placeholder="FISHER_01" oninput="this.value=this.value.toUpperCase()">
+    <button class="login-btn" onclick="doLogin()">دخول &#8594;</button>
+    <div class="login-error" id="login-error" style="display:none; color:#ef233c; margin-top:10px;">❌ كود غير صحيح</div>
+  </div>
+</div>
+
+<button class="report-fab" id="report-fab" onclick="openRating()">📋</button>
+
+<div class="top-bar">
+    <div class="brand">
+        <div class="brand-icon">⚓</div>
+        <div class="brand-text">خريطة مستغانم</div>
+    </div>
+    <div class="header-btns">
+        <button class="hbtn" id="gps-btn" onclick="toggleGPS()">📍 GPS</button>
+    </div>
+</div>
+
+<div class="rating-panel" id="rating-panel">
+    <div style="text-align:center; color:white; margin-bottom:15px;">تسجيل حالة الصيد</div>
+    <button class="login-btn" onclick="sendRating()">إرسال التقرير للجدول</button>
+    <button class="hbtn" style="width:100%; margin-top:10px;" onclick="closeRating()">إلغاء</button>
+    <div id="send-status" style="text-align:center; margin-top:10px;"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ===== الإعدادات الرئيسية =====
+var SHEET_URL = "https://script.google.com/macros/s/AKfycbxWLFTF4n-EJLW_ew84c8evi2yv_3KG8k0SYnO8MHk/exec";
+var VALID_CODES = ["FISHER_01","FISHER_02","FISHER_03","FISHER_04","FISHER_05"];
+var currentUser = null;
+var gpsLat = null, gpsLon = null, gpsActive = false;
+var map, gpsMarker, gpsCircle, gpsWatchId;
+
+// تشغيل الخريطة
+map = L.map('map', {zoomControl:false}).setView([36.2, 0.3], 9);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+function doLogin() {
+    var code = document.getElementById('login-input').value.trim().toUpperCase();
+    if (VALID_CODES.indexOf(code) >= 0) {
+        currentUser = code;
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('report-fab').style.display = 'flex';
+        startGPS(); // تفعيل الجي بي اس آلياً عند الدخول
+    } else {
+        document.getElementById('login-error').style.display = 'block';
+    }
+}
+
+function toggleGPS() { gpsActive ? stopGPS() : startGPS(); }
+
+function startGPS() {
+    if(!navigator.geolocation) return alert('GPS غير مدعوم');
+    var btn = document.getElementById('gps-btn');
+    btn.textContent = '...جاري البحث';
+    
+    gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
+        gpsLat = pos.coords.latitude;
+        gpsLon = pos.coords.longitude;
+        var acc = pos.coords.accuracy;
+        
+        var icon = L.divIcon({className:'', html:'<div class="gps-pulse"></div>', iconSize:[18,18], iconAnchor:[9,9]});
+        
+        if(!gpsMarker) {
+            gpsMarker = L.marker([gpsLat, gpsLon], {icon: icon}).addTo(map);
+            gpsCircle = L.circle([gpsLat, gpsLon], {radius: acc, color: '#06d6a0', fillOpacity: 0.1}).addTo(map);
+            map.setView([gpsLat, gpsLon], 13);
+        } else {
+            gpsMarker.setLatLng([gpsLat, gpsLon]);
+            gpsCircle.setLatLng([gpsLat, gpsLon]).setRadius(acc);
+        }
+        
+        btn.textContent = 'GPS نشط';
+        btn.classList.add('gps-on');
+        gpsActive = true;
+    }, function(err) {
+        alert("يرجى تفعيل الموقع (GPS) في هاتفك");
+    }, {enableHighAccuracy: true});
+}
+
+function stopGPS() {
+    if(gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+    if(gpsMarker) map.removeLayer(gpsMarker);
+    if(gpsCircle) map.removeLayer(gpsCircle);
+    document.getElementById('gps-btn').textContent = '📍 GPS';
+    document.getElementById('gps-btn').classList.remove('gps-on');
+    gpsActive = false;
+}
+
+function openRating() { document.getElementById('rating-panel').classList.add('open'); }
+function closeRating() { document.getElementById('rating-panel').classList.remove('open'); }
+
+function sendRating() {
+    if (!gpsLat) return alert("انتظر تحديد موقعك أولاً");
+    var status = document.getElementById('send-status');
+    status.textContent = "جاري الإرسال...";
+    
+    var payload = {
+        code: currentUser,
+        lat: gpsLat.toFixed(6),
+        lon: gpsLon.toFixed(6),
+        rating: "صيد ناجح", // يمكنك تغييرها لتأخذ قيمة من الأزرار
+        date: new Date().toLocaleDateString('fr-DZ')
+    };
+
+    fetch(SHEET_URL, { method: 'POST', body: JSON.stringify(payload), mode: 'no-cors' })
+    .then(() => {
+        status.textContent = "✅ تم بنجاح";
+        setTimeout(closeRating, 2000);
+    }).catch(() => {
+        status.textContent = "❌ فشل الإرسال";
+    });
+}
+</script>
+</body>
+</html>
