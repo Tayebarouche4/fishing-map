@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
+<title>خريطة الصياد التفاعلية</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --night:#060d18; --gold:#f5a623; --gold2:#ffd166;
+  --green:#06d6a0; --dim:#6a9bb8; --text:#e8f1f8;
+  --border:rgba(100,180,220,0.2);
+}
+html,body { 
+  width:100%; 
+  height:100%; 
+  overflow:hidden; 
+  font-family:'Tajawal',sans-serif; 
+  background: #060d18;
+}
+#windy-map { 
+  width:100%; 
+  height:100vh; 
+  border: none; 
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+.weather-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(6,13,24,0.9);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  min-width: 200px;
+}
+.weather-controls h3 {
+  margin: 0 0 15px 0;
+  color: var(--gold2);
+  font-size: 16px;
+  text-align: center;
+}
+.weather-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  background: rgba(56,189,248,0.2);
+  border: 1px solid rgba(56,189,248,0.5);
+  color: var(--text);
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+.weather-btn:hover {
+  background: rgba(56,189,248,0.4);
+  border-color: var(--gold2);
+}
+.weather-btn.active {
+  background: rgba(245,166,35,0.3);
+  border-color: var(--gold);
+  color: var(--gold2);
+}
+.weather-info {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<!-- خريطة Windy المتحركة -->
+<iframe id="windy-map" 
+  src="https://www.windy.com/overlay-waves?36.2,0.3,8" 
+  frameborder="0"
+  allowfullscreen>
+</iframe>
+
+<!-- لوحة التحكم بالطقس -->
+<div class="weather-controls">
+  <h3>🌊 طبقات الطقس</h3>
+  <button class="weather-btn active" onclick="changeWindyLayer('waves')">🌊 الأمواج</button>
+  <button class="weather-btn" onclick="changeWindyLayer('wind')">💨 الرياح</button>
+  <button class="weather-btn" onclick="changeWindyLayer('temp')">🌡️ درجة الحرارة</button>
+  <button class="weather-btn" onclick="changeWindyLayer('rain')">🌧️ المطر</button>
+  <button class="weather-btn" onclick="changeWindyLayer('clouds')">☁️ الغيوم</button>
+  <button class="weather-btn" onclick="changeWindyLayer('pressure')">🔵 الضغط الجوي</button>
+  
+  <div class="weather-info">
+    <p>خريطة البحر المتوسط</p>
+    <p>مستوى الزوم: 8</p>
+  </div>
+</div>
+
+<script>
+// تغيير طبقات Windy
+function changeWindyLayer(layer) {
+  const iframe = document.getElementById('windy-map');
+  const buttons = document.querySelectorAll('.weather-btn');
+  
+  // إزالة الكلاس النشط من كل الأزرار
+  buttons.forEach(btn => btn.classList.remove('active'));
+  
+  // إضافة الكلاس النشط للزر المضغوط
+  event.target.classList.add('active');
+  
+  // تحديث رابط Windy مع الطبقة المطلوبة
+  const windyUrl = `https://www.windy.com/overlay-${layer}?36.2,0.3,8`;
+  iframe.src = windyUrl;
+  
+  console.log(`تم التبديل إلى طبقة: ${layer}`);
+}
+
+// تحسين تجربة المستخدم
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('خريطة Windy المتحركة جاهزة!');
+  console.log('الطبقة الافتراضية: الأمواج');
+  console.log('الإحداثيات: 36.2°N, 0.3°E (البحر المتوسط)');
+});
+
+// منع التمرير في الصفحة للتركيز على الخريطة
+document.body.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+}, { passive: false });
+</script>
+
+</body>
+</html>
