@@ -1,0 +1,1997 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
+<title>خريطة الصياد التفاعلية</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --night:#060d18; --gold:#f5a623; --gold2:#ffd166;
+  --green:#06d6a0; --dim:#6a9bb8; --text:#e8f1f8;
+  --border:rgba(100,180,220,0.2);
+}
+html,body { width:100%; height:100%; overflow:hidden; font-family:'Tajawal',sans-serif; }
+#map { width:100%; height:100%; }
+.top-bar {
+  position:absolute; top:0; left:0; right:0; z-index:1000;
+  background:linear-gradient(180deg,rgba(6,13,24,.97),rgba(6,13,24,.85));
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--border);
+  padding:10px 14px 8px;
+}
+.top-bar-row1 { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.brand { display:flex; align-items:center; gap:8px; }
+.brand-icon {
+  width:34px; height:34px; background:linear-gradient(135deg,var(--gold),#d06b00);
+  border-radius:8px; display:flex; align-items:center; justify-content:center;
+  font-size:18px; box-shadow:0 3px 12px rgba(245,166,35,.4);
+}
+.brand-text { font-size:.95rem; font-weight:900; color:var(--text); }
+.brand-sub  { font-size:.6rem; color:var(--dim); }
+.header-btns { display:flex; gap:6px; }
+.hbtn {
+  background:rgba(255,255,255,.08); border:1px solid var(--border);
+  color:var(--text); font-family:'Tajawal',sans-serif;
+  font-size:.72rem; padding:5px 10px; border-radius:8px;
+  cursor:pointer; transition:all .2s;
+}
+.hbtn.gps-on { background:rgba(6,214,160,.2); border-color:var(--green); color:var(--green); }
+.layer-tabs {
+  display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px;
+}
+.layer-tabs::-webkit-scrollbar { display:none; }
+.layer-tab {
+  flex-shrink:0; display:flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,.07); border:1px solid var(--border);
+  border-radius:8px; padding:5px 10px; cursor:pointer; white-space:nowrap;
+}
+.layer-tab.active { background:rgba(245,166,35,.2); border-color:var(--gold); }
+.layer-tab-icon  { font-size:1rem; }
+.layer-tab-label { font-size:.72rem; font-weight:700; color:var(--dim); }
+.layer-tab.active .layer-tab-label { color:var(--gold2); }
+.opacity-wrap { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.opacity-wrap label { font-size:.65rem; color:var(--dim); white-space:nowrap; }
+input[type=range] { flex:1; height:4px; cursor:pointer; accent-color:var(--gold); }
+.info-panel {
+  position:absolute; bottom:0; left:0; right:0; z-index:1000;
+  background:linear-gradient(0deg,rgba(6,13,24,.97),rgba(6,13,24,.85));
+  backdrop-filter:blur(10px); border-top:1px solid var(--border);
+  padding:10px 14px 12px;
+}
+.info-row { display:flex; gap:8px; }
+.info-card {
+  flex:1; background:rgba(255,255,255,.06); border:1px solid var(--border);
+  border-radius:10px; padding:8px 6px; text-align:center;
+}
+.info-val { font-size:.85rem; font-weight:700; color:var(--text); }
+.info-lbl { font-size:.56rem; color:var(--dim); margin-top:2px; }
+.gps-pulse {
+  width:18px; height:18px; background:var(--green);
+  border-radius:50%; border:3px solid white; animation:gpsPulse 2s infinite;
+}
+@keyframes gpsPulse {
+  0%   { box-shadow:0 0 0 0 rgba(6,214,160,.6); }
+  70%  { box-shadow:0 0 0 12px rgba(6,214,160,0); }
+  100% { box-shadow:0 0 0 0 rgba(6,214,160,0); }
+}
+.loading-bar {
+  position:absolute; inset:0; z-index:999; background:var(--night);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+}
+/* سلم الألوان */
+.legend {
+  position:absolute; left:12px; bottom:80px; z-index:1000;
+  background:rgba(6,13,24,.92); border:1px solid var(--border);
+  border-radius:12px; padding:10px 12px; min-width:110px;
+  backdrop-filter:blur(10px);
+}
+.legend-title { font-size:.65rem; color:var(--dim); margin-bottom:6px; text-align:center; }
+.legend-bar {
+  width:100%; height:14px; border-radius:4px; margin-bottom:4px;
+}
+.legend-labels { display:flex; justify-content:space-between; }
+.legend-label { font-size:.6rem; color:var(--text); }
+/* tooltip قيمة عند مرور المؤشر */
+.map-tooltip {
+  position:absolute; z-index:1001; pointer-events:none;
+  background:rgba(6,13,24,.95); border:1px solid var(--gold);
+  border-radius:8px; padding:6px 10px; font-size:.75rem;
+  color:var(--text); white-space:nowrap; display:none;
+}
+.spinner {
+  width:44px; height:44px; border:4px solid rgba(245,166,35,.2);
+  border-top-color:var(--gold); border-radius:50%; animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-text { font-size:.85rem; color:var(--dim); }
+.date-badge {
+  font-size:.58rem; color:var(--gold2); background:rgba(245,166,35,.12);
+  padding:2px 8px; border-radius:6px; border:1px solid rgba(245,166,35,.25);
+  margin-top:4px; display:inline-block;
+}
+.top-bar, .info-panel {
+  padding-left:max(14px, env(safe-area-inset-left));
+  padding-right:max(14px, env(safe-area-inset-right));
+}
+.info-panel { padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+.data-banner {
+  margin-top:8px; font-size:.62rem; color:#ffb4b4; line-height:1.45;
+  padding:6px 8px; border-radius:8px;
+  background:rgba(239,35,60,.14); border:1px solid rgba(239,35,60,.28);
+  display:none;
+}
+
+/* ===== نظام التقييم ===== */
+.login-overlay {
+  position:absolute; inset:0; z-index:2000;
+  background:rgba(6,13,24,.97);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:24px;
+}
+.login-box {
+  background:rgba(17,36,64,.9); border:1px solid var(--border);
+  border-radius:18px; padding:28px 24px;
+  width:100%; max-width:340px; text-align:center;
+}
+.login-icon { font-size:2.5rem; margin-bottom:8px; }
+.login-title { font-size:1.1rem; font-weight:900; color:var(--text); margin-bottom:6px; }
+.login-sub { font-size:.75rem; color:var(--dim); margin-bottom:20px; line-height:1.6; }
+.login-input {
+  width:100%; padding:12px 14px;
+  background:rgba(255,255,255,.08); border:1px solid var(--border);
+  border-radius:10px; color:var(--text);
+  font-family:'Tajawal',sans-serif; font-size:1.1rem;
+  text-align:center; letter-spacing:.15em; margin-bottom:12px; outline:none;
+}
+.login-input:focus { border-color:var(--gold); }
+.login-btn {
+  width:100%; padding:12px;
+  background:linear-gradient(135deg,var(--gold),#d06b00);
+  border:none; border-radius:10px;
+  color:var(--night); font-family:'Tajawal',sans-serif;
+  font-size:1rem; font-weight:700; cursor:pointer;
+}
+.login-error { font-size:.75rem; color:#ef233c; margin-top:10px; display:none; }
+
+.report-fab {
+  position:absolute; bottom:85px; right:14px; z-index:999;
+  width:52px; height:52px;
+  background:linear-gradient(135deg,var(--gold),#d06b00);
+  border:none; border-radius:50%; cursor:pointer;
+  font-size:1.4rem; display:none;
+  box-shadow:0 4px 20px rgba(245,166,35,.5);
+  align-items:center; justify-content:center;
+}
+
+.correction-fab {
+  position:absolute; bottom:148px; right:14px; z-index:999;
+  width:52px; height:52px;
+  background:linear-gradient(135deg,#38bdf8,#0369a1);
+  border:none; border-radius:50%; cursor:pointer;
+  display:none;
+  box-shadow:0 4px 20px rgba(56,189,248,.45);
+  align-items:center; justify-content:center;
+  flex-direction:column;
+  justify-content:center;
+  gap:1px;
+  padding:4px;
+  font-family:'Tajawal',sans-serif;
+  color:#fff;
+  font-size:.58rem; font-weight:900; line-height:1.05;
+}
+
+.rating-panel {
+  position:absolute; bottom:0; left:0; right:0; z-index:1500;
+  background:linear-gradient(0deg,rgba(6,13,24,.99),rgba(11,26,46,.97));
+  border-top:2px solid var(--gold); border-radius:20px 20px 0 0;
+  padding:18px 16px 28px;
+  transform:translateY(100%); transition:transform .3s ease;
+}
+.rating-panel.open { transform:translateY(0); }
+.correction-panel {
+  position:absolute; bottom:0; left:0; right:0; z-index:1500;
+  background:linear-gradient(0deg,rgba(6,13,24,.99),rgba(11,26,46,.97));
+  border-top:2px solid #38bdf8; border-radius:20px 20px 0 0;
+  padding:18px 16px 28px;
+  transform:translateY(100%); transition:transform .3s ease;
+}
+.correction-panel.open { transform:translateY(0); }
+.correction-options { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.obstacle-label { font-size:.75rem; color:var(--dim); margin-bottom:4px; text-align:right; }
+.obstacle-select {
+  width:100%; padding:12px 10px; background:rgba(255,255,255,.08);
+  border:1px solid var(--border); border-radius:12px;
+  color:var(--text); font-family:'Tajawal',sans-serif; font-size:.82rem; font-weight:700;
+  cursor:pointer; text-align:right; direction:rtl;
+}
+.obstacle-select:focus { outline:none; border-color:#38bdf8; }
+.rating-header { text-align:center; margin-bottom:12px; }
+.rating-title { font-size:.95rem; font-weight:700; color:var(--text); }
+.rating-coords { font-size:.68rem; color:var(--dim); font-family:monospace; margin-top:3px; }
+.rating-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.rating-btn {
+  padding:12px 6px; background:rgba(255,255,255,.06);
+  border:1px solid var(--border); border-radius:12px;
+  cursor:pointer; text-align:center; transition:all .2s;
+}
+.rating-btn:active { transform:scale(.96); }
+.rating-btn.selected { border-color:var(--gold); background:rgba(245,166,35,.15); }
+.rating-btn-icon { font-size:1.5rem; display:block; margin-bottom:3px; }
+.rating-btn-label { font-size:.7rem; color:var(--dim); font-weight:700; line-height:1.3; }
+.rating-btn.selected .rating-btn-label { color:var(--gold2); }
+.boxes-wrap { display:none; margin-bottom:12px; }
+.boxes-wrap.show { display:block; }
+.boxes-label { font-size:.75rem; color:var(--dim); margin-bottom:5px; }
+.boxes-input {
+  width:100%; padding:10px 12px;
+  background:rgba(255,255,255,.08); border:1px solid var(--border);
+  border-radius:10px; color:var(--text);
+  font-family:'Tajawal',sans-serif; font-size:1rem; outline:none;
+}
+.boxes-input:focus { border-color:var(--gold); }
+.send-btn {
+  width:100%; padding:12px; margin-bottom:8px;
+  background:linear-gradient(135deg,var(--green),#00a87a);
+  border:none; border-radius:12px;
+  color:var(--night); font-family:'Tajawal',sans-serif;
+  font-size:1rem; font-weight:700; cursor:pointer;
+}
+.cancel-btn {
+  width:100%; padding:9px; background:transparent;
+  border:1px solid var(--border); border-radius:12px;
+  color:var(--dim); font-family:'Tajawal',sans-serif;
+  font-size:.85rem; cursor:pointer;
+}
+.send-status { text-align:center; font-size:.78rem; margin-top:8px; display:none; }
+
+/* ===== نافذة الطقس البحري ===== */
+.weather-panel {
+  position:absolute; inset:0; z-index:1800;
+  background:rgba(6,13,24,.98);
+  display:none; flex-direction:column;
+  overflow:hidden;
+}
+.weather-panel.open { display:flex; }
+.weather-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px 10px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(6,13,24,1),rgba(11,26,46,.95));
+  flex-shrink:0;
+}
+.weather-title { font-size:1rem; font-weight:900; color:var(--text); }
+.weather-sub   { font-size:.62rem; color:var(--dim); margin-top:2px; }
+.weather-close {
+  background:rgba(255,255,255,.08); border:1px solid var(--border);
+  color:var(--text); font-size:1.1rem; width:34px; height:34px;
+  border-radius:8px; cursor:pointer; display:flex;
+  align-items:center; justify-content:center;
+}
+.weather-body { flex:1; overflow-y:auto; padding:12px 14px 20px; }
+.weather-day-block {
+  margin-bottom:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border); border-radius:14px; overflow:hidden;
+}
+.weather-day-title {
+  background:rgba(245,166,35,.12); border-bottom:1px solid var(--border);
+  padding:8px 12px; font-size:.78rem; font-weight:700; color:var(--gold2);
+  display:flex; align-items:center; gap:6px;
+}
+.weather-table {
+  width:100%; border-collapse:collapse; font-size:.72rem;
+}
+.weather-table th {
+  padding:6px 8px; color:var(--dim); font-weight:700;
+  border-bottom:1px solid var(--border); text-align:center;
+  background:rgba(255,255,255,.03);
+}
+.weather-table td {
+  padding:7px 8px; text-align:center; color:var(--text);
+  border-bottom:1px solid rgba(100,180,220,.08);
+}
+.weather-table tr:last-child td { border-bottom:none; }
+.weather-table tr:nth-child(even) td { background:rgba(255,255,255,.02); }
+.wv-cell { font-weight:700; }
+.wv-low  { color:#06d6a0; }
+.wv-mid  { color:#ffd166; }
+.wv-high { color:#ef233c; }
+.ws-cell { font-weight:700; }
+.ws-low  { color:#06d6a0; }
+.ws-mid  { color:#ffd166; }
+.ws-high { color:#ef233c; }
+.weather-loading {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:12px; padding:40px;
+}
+.weather-error {
+  text-align:center; color:#ef233c; font-size:.8rem;
+  padding:30px; line-height:1.7;
+}
+/* أيقونة الطقس في الشريط */
+.weather-fab {
+  flex-shrink:0; display:flex; align-items:center; gap:5px;
+  background:rgba(14,165,233,.12); border:1px solid rgba(14,165,233,.35);
+  border-radius:8px; padding:5px 10px; cursor:pointer; white-space:nowrap;
+}
+.weather-fab-icon  { font-size:1rem; }
+.weather-fab-label { font-size:.72rem; font-weight:700; color:#38bdf8; }
+/* بطاقات تقييم الرحلة */
+.trip-cards { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+.trip-card {
+  border-radius:14px; padding:12px 14px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.04);
+}
+.trip-card.green  { border-color:rgba(6,214,160,.5);  background:rgba(6,214,160,.08); }
+.trip-card.orange { border-color:rgba(251,146,60,.5); background:rgba(251,146,60,.08); }
+.trip-card.red    { border-color:rgba(239,35,60,.5);  background:rgba(239,35,60,.08); }
+.trip-card-top { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.trip-card-icon { font-size:1.6rem; flex-shrink:0; }
+.trip-card-day  { font-size:.8rem; font-weight:900; color:var(--text); }
+.trip-card-badge{
+  margin-right:auto; font-size:.65rem; font-weight:700; padding:3px 10px;
+  border-radius:20px; white-space:nowrap;
+}
+.trip-card.green  .trip-card-badge { background:rgba(6,214,160,.25); color:#06d6a0; }
+.trip-card.orange .trip-card-badge { background:rgba(251,146,60,.25); color:#fb923c; }
+.trip-card.red    .trip-card-badge { background:rgba(239,35,60,.25);  color:#ef233c; }
+.trip-card-desc { font-size:.72rem; color:var(--dim); line-height:1.6; }
+.trip-window {
+  margin-top:6px; font-size:.68rem; font-weight:700;
+  padding:4px 10px; border-radius:8px; display:inline-block;
+}
+.trip-card.green  .trip-window { background:rgba(6,214,160,.15); color:#06d6a0; }
+.trip-card.orange .trip-window { background:rgba(251,146,60,.15); color:#fb923c; }
+.trip-card.red    .trip-window { background:rgba(239,35,60,.15);  color:#ef233c; }
+.section-title {
+  font-size:.7rem; font-weight:900; color:var(--dim);
+  letter-spacing:.08em; margin:14px 0 8px;
+  display:flex; align-items:center; gap:6px;
+}
+.section-title::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+/* شريط الأيام الموسعة المنسدل */
+.extended-toggle {
+  display:flex; align-items:center; gap:10px;
+  padding:11px 14px; margin-bottom:2px;
+  background:rgba(245,166,35,.07);
+  border:1px solid rgba(245,166,35,.25);
+  border-radius:12px; cursor:pointer;
+  user-select:none; transition:background .2s;
+}
+.extended-toggle:active { background:rgba(245,166,35,.14); }
+.extended-toggle-label {
+  flex:1; font-size:.78rem; font-weight:700; color:var(--gold2);
+}
+.extended-toggle-sub {
+  font-size:.62rem; color:var(--dim);
+}
+.extended-toggle-arrow {
+  font-size:.85rem; color:var(--gold); transition:transform .3s;
+}
+.extended-toggle.open .extended-toggle-arrow { transform:rotate(180deg); }
+.extended-body {
+  display:none; overflow:hidden;
+}
+.extended-body.open { display:block; }
+.danger-item:hover { background:rgba(245,166,35,0.15); }
+.danger-item.active { background:rgba(245,166,35,0.25);border-color:var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="loading-bar" id="loading-bar">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">جاري تحميل الخريطة...</div>
+</div>
+
+<div id="map"></div>
+
+<!-- شاشة الدخول -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-icon">🎣</div>
+    <div class="login-title">دليل الصياد</div>
+    <div class="login-sub">أدخل كودك الخاص للوصول إلى الخريطة وإرسال تقاريرك</div>
+    <input class="login-input" id="login-input" type="text"
+           placeholder="FISHER_01" maxlength="20"
+           oninput="this.value=this.value.toUpperCase()"
+           onkeypress="if(event.key==='Enter') doLogin()">
+    <button class="login-btn" onclick="doLogin()">دخول &#8594;</button>
+    <div class="login-error" id="login-error">&#10060; كود غير صحيح — تواصل مع المشرف</div>
+  </div>
+</div>
+
+<!-- زر تصحيح (فوق التقييم) -->
+<button type="button" class="correction-fab" id="correction-fab" onclick="openCorrection()" style="display:none;" title="تصحيح — إبلاغ عن مخاطر">
+  تصحيح
+</button>
+
+<!-- زر إرسال تقييم -->
+<button type="button" class="report-fab" id="report-fab" onclick="openRating()" style="display:none;align-items:center;justify-content:center;">
+  &#128203;
+</button>
+
+<!-- نافذة التقييم -->
+<div class="rating-panel" id="rating-panel">
+  <div class="rating-header">
+    <div class="rating-title">&#128203; تقييم موقع الصيد</div>
+    <div class="rating-coords" id="rating-coords">جاري تحديد موقعك...</div>
+  </div>
+  <div class="rating-grid">
+    <div class="rating-btn" onclick="selectRating(this,'صيد')">
+      <span class="rating-btn-icon">&#9989;</span>
+      <span class="rating-btn-label">صيد ناجح</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'لا يوجد صيد')">
+      <span class="rating-btn-icon">&#10060;</span>
+      <span class="rating-btn-label">لا يوجد صيد</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'تجمع بدون اصطياد')">
+      <span class="rating-btn-icon">&#128993;</span>
+      <span class="rating-btn-label">تجمع بدون اصطياد</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'ملاحظة أسماك')">
+      <span class="rating-btn-icon">&#128065;</span>
+      <span class="rating-btn-label">ملاحظة أسماك</span>
+    </div>
+  </div>
+  <div class="boxes-wrap" id="boxes-wrap">
+    <div class="boxes-label">&#128230; عدد الصناديق:</div>
+    <input class="boxes-input" id="boxes-input" type="number" placeholder="—" inputmode="numeric">
+  </div>
+  <button class="send-btn" onclick="sendRating()">&#9989; إرسال التقييم</button>
+  <button class="cancel-btn" onclick="closeRating()">إلغاء</button>
+  <div class="send-status" id="send-status"></div>
+</div>
+
+<!-- نافذة تصحيح (مخاطر بحرية) -->
+<div class="correction-panel" id="correction-panel">
+  <div class="rating-header">
+    <div class="rating-title">&#128295; تصحيح — إبلاغ عن مُخاطر</div>
+    <div class="rating-coords" id="correction-coords">جاري تحديد موقعك...</div>
+  </div>
+  <div class="correction-options">
+    <label class="obstacle-label" for="obstacleType">نوع العائق</label>
+    <select id="obstacleType" name="obstacleType" class="obstacle-select" onchange="onObstacleTypeChange()">
+      <option value="" disabled selected>— اختر نوع العائق —</option>
+      <option value="نتوء صخري">نتوء صخري</option>
+      <option value="مخلفات صلبة">مخلفات صلبة</option>
+      <option value="كابلات">كابلات</option>
+      <option value="حطام سفينة">حطام سفينة</option>
+      <option value="أخرى">أخرى</option>
+    </select>
+  </div>
+  <div class="boxes-wrap" id="correction-other-wrap" style="display:none;">
+    <div class="boxes-label">تفاصيل إضافية (اختياري)</div>
+    <input class="boxes-input" id="correction-note" type="text" placeholder="وصف مختصر">
+  </div>
+  <button type="button" class="send-btn" onclick="sendCorrection()">&#9989; إرسال التصحيح</button>
+  <button type="button" class="cancel-btn" onclick="closeCorrection()">إلغاء</button>
+  <div class="send-status" id="correction-send-status"></div>
+</div>
+
+<div class="legend" id="legend">
+  <div class="legend-title" id="legend-title">حرارة السطح °C</div>
+  <canvas class="legend-bar" id="legend-bar" width="200" height="14"></canvas>
+  <div class="legend-labels">
+    <span class="legend-label" id="legend-min">13</span>
+    <span class="legend-label" id="legend-max">28</span>
+  </div>
+</div>
+<div class="map-tooltip" id="map-tooltip"></div>
+
+<div class="top-bar">
+  <div class="top-bar-row1">
+    <div class="brand">
+      <div class="brand-icon">&#127907;</div>
+      <div>
+        <div class="brand-text">خريطة الصياد</div>
+        <div class="brand-sub" id="active-label">اختر طبقة</div>
+        <div class="date-badge" id="date-badge" title="تاريخ طبقة البيانات المعروضة">جاري التحميل…</div>
+      </div>
+    </div>
+    <div class="header-btns">
+      <button class="hbtn" id="gps-btn" onclick="toggleGPS()">&#128205; GPS</button>
+      <button class="hbtn" onclick="map.setView([36.2,0.3],9)">&#127758; العودة</button>
+    </div>
+  </div>
+  <div class="layer-tabs">
+    <div class="layer-tab active" onclick="switchLayer('sst',this)">
+      <span class="layer-tab-icon">&#127777;</span>
+      <span class="layer-tab-label">حرارة</span>
+    </div>
+    <div class="layer-tab" onclick="switchLayer('ssh',this)">
+      <span class="layer-tab-icon">&#11205;</span>
+      <span class="layer-tab-label">شفافية المياه</span>
+    </div>
+    <div class="layer-tab" onclick="toggleDangersDropdown(this)" id="dangers-tab">
+      <span class="layer-tab-icon">⚠️</span>
+      <span class="layer-tab-label">أخطار</span>
+    </div>
+    <div class="layer-tab" onclick="switchLayer('vo',this)">
+      <span class="layer-tab-icon">&#8597;</span>
+      <span class="layer-tab-label">تيار شمال/جنوب</span>
+    </div>
+  </div>
+  <!-- قائمة منسدلة للأخطار -->
+  <div id="dangers-dropdown" style="display:none;margin-top:6px;background:rgba(6,13,24,0.95);border:1px solid var(--border);border-radius:12px;padding:8px;">
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-rocks" onchange="toggleDanger('rocks', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-rocks" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>🪨</span>
+        <span>مناطق صخرية</span>
+      </label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-wrecks" onchange="toggleDanger('wrecks', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-wrecks" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>⚓</span>
+        <span>حطام سفن</span>
+      </label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-cables" onchange="toggleDanger('cables', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-cables" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>📡</span>
+        <span>كابلات</span>
+      </label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-debris" onchange="toggleDanger('debris', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-debris" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>🗑️</span>
+        <span>مخلفات</span>
+      </label>
+    </div>
+  </div>
+  <!-- زر المسارات منفصل -->
+  <div style="margin-top:6px;display:flex;gap:6px;">
+    <div class="layer-tab" id="route-btn" onclick="toggleRoutes(this)" style="background:rgba(6,214,160,0.1);border-color:rgba(6,214,160,0.3);">
+      <span class="layer-tab-icon">&#128205;</span>
+      <span class="layer-tab-label" style="color:#06d6a0;">المسارات</span>
+    </div>
+    <div class="layer-tab" id="current1-btn" onclick="toggleCurrent1(this)" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);">
+      <span class="layer-tab-icon" style="color:#ef4444;">🌊</span>
+      <span class="layer-tab-label" style="color:#ef4444;">تيار السطح 1م</span>
+    </div>
+    <div class="layer-tab" id="current50-btn" onclick="toggleCurrent50(this)" style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.3);">
+      <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
+      <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
+    </div>
+  </div>
+  <div class="opacity-wrap">
+    <label>شفافية</label>
+    <input type="range" id="opacity-slider" min="0.1" max="1" step="0.05" value="0.85"
+           oninput="setOpacity(this.value)">
+  </div>
+  <div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end;">
+    <div class="weather-fab" onclick="openWeather()">
+      <span class="weather-fab-icon">⛅</span>
+      <span class="weather-fab-label">أحوال الطقس</span>
+    </div>
+  </div>
+  <div class="data-banner" id="data-banner" role="alert"></div>
+</div>
+
+<div class="info-panel">
+  <div class="info-row">
+    <div class="info-card">
+      <div class="info-val" id="info-lat">--</div>
+      <div class="info-lbl">خط العرض</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-lon">--</div>
+      <div class="info-lbl">خط الطول</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-zoom">9</div>
+      <div class="info-lbl">التكبير</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-gps">--</div>
+      <div class="info-lbl">دقة GPS</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  مسارات البيانات: نجرب tiles/ ثم ../tiles/ حسب مكان الصفحة
+// ============================================================
+var TILES_BASE = 'tiles/';
+var ROUTES_GEOJSON = 'rout.geojson';
+
+var DATE = "loading...";
+var LAYERS = {};
+var UNIFIED_BOUNDS = null;
+
+var DEFAULT_BOUNDS = {
+  sst:[[35.7041,-0.4291],[36.6958,0.9958]],
+  ssh:[[35.7041,-0.4291],[36.6958,0.9958]],
+  uo:[[35.75,-0.4166],[36.6666,1.0]],
+  vo:[[35.75,-0.4166],[36.6666,1.0]],
+};
+
+var DATA_PATHS = [
+  { tiles: 'tiles/', routes: 'rout.geojson' },
+  { tiles: '../tiles/', routes: '../rout.geojson' },
+];
+
+function setDateBadge() {
+  var el = document.getElementById('date-badge');
+  if (el) el.textContent = 'تاريخ البيانات: ' + DATE;
+}
+
+function applyBoundsFromJson(d) {
+  UNIFIED_BOUNDS = null;
+  if (!d) return;
+  if (d.date) DATE = d.date;
+  var b = d.bounds || d.bbox || d.extent;
+  if (b && b.length === 2 && b[0].length === 2 && b[1].length === 2) {
+    UNIFIED_BOUNDS = b;
+  }
+}
+
+function fetchBoundsForDate() {
+  return fetch(TILES_BASE + DATE + '/bounds.json')
+    .then(function(r) {
+      if (!r.ok) throw new Error('no bounds');
+      return r.json();
+    })
+    .then(function(d) { applyBoundsFromJson(d); })
+    .catch(function() { /* الحدود الافتراضية */ });
+}
+
+function hideLoadingBar() {
+  var lb = document.getElementById('loading-bar');
+  if (lb) lb.style.display = 'none';
+  if (typeof map !== 'undefined' && map) {
+    setTimeout(function() { map.invalidateSize(); }, 120);
+  }
+}
+
+function showDataBanner(msg) {
+  var b = document.getElementById('data-banner');
+  if (!b) return;
+  b.style.display = 'block';
+  b.textContent = msg;
+}
+
+function startApp() {
+  setDateBadge();
+  buildLayers();
+  switchLayer('sst', document.querySelector('.layer-tab'));
+  hideLoadingBar();
+}
+
+/** يختبر tiles/dates.json من كل مسار حتى ينجح */
+function probeDatesJson() {
+  function tryIdx(i) {
+    if (i >= DATA_PATHS.length) {
+      return Promise.reject(new Error('no dates'));
+    }
+    var p = DATA_PATHS[i];
+    return fetch(p.tiles + 'dates.json', { cache: 'no-store' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('bad');
+        return r.json();
+      })
+      .then(function(data) {
+        TILES_BASE = p.tiles;
+        ROUTES_GEOJSON = p.routes;
+        return data;
+      })
+      .catch(function() { return tryIdx(i + 1); });
+  }
+  return tryIdx(0);
+}
+
+/**
+ * يولّد قائمة تواريخ ابتداءً من اليوم الحالي إلى الوراء (30 يوم)
+ * بصيغة YYYY-MM-DD ويجرّب كل تاريخ حتى يجد مجلداً موجوداً
+ */
+function generateRecentDates(count) {
+  var dates = [];
+  var now = new Date();
+  for (var i = 0; i < count; i++) {
+    var d = new Date(now);
+    d.setDate(d.getDate() - i);
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    dates.push(y + '-' + m + '-' + day);
+  }
+  return dates;
+}
+
+/** يبحث عن أحدث مجلد موجود فعلاً في tiles/ بالفحص التسلسلي */
+function findLatestAvailableDate(tilesBase) {
+  var candidates = generateRecentDates(30);
+  function tryDate(i) {
+    if (i >= candidates.length) return Promise.reject(new Error('no folder found'));
+    var d = candidates[i];
+    return fetch(tilesBase + d + '/sst.png', { cache: 'no-store', method: 'HEAD' })
+      .then(function(r) {
+        if (r.ok) return d;
+        throw new Error('not found');
+      })
+      .catch(function() { return tryDate(i + 1); });
+  }
+  return tryDate(0);
+}
+
+/** Fallback ذكي: يكتشف أحدث مجلد تلقائياً بدل تاريخ ثابت */
+function tryFallbackBoundsThenStart() {
+  function tryPath(i) {
+    if (i >= DATA_PATHS.length) {
+      return Promise.reject(new Error('no tiles path reachable'));
+    }
+    var p = DATA_PATHS[i];
+    return findLatestAvailableDate(p.tiles)
+      .then(function(foundDate) {
+        TILES_BASE = p.tiles;
+        ROUTES_GEOJSON = p.routes;
+        DATE = foundDate;
+        setDateBadge();
+        return fetchBoundsForDate();
+      })
+      .catch(function() { return tryPath(i + 1); });
+  }
+  return tryPath(0);
+}
+
+function guessTilesBaseFromUrl() {
+  var path = (window.location.pathname || '').replace(/\\/g, '/');
+  if (/\/index\/index\.html$/i.test(path) || /\/index\/$/i.test(path)) {
+    TILES_BASE = '../tiles/';
+    ROUTES_GEOJSON = '../rout.geojson';
+  } else {
+    TILES_BASE = 'tiles/';
+    ROUTES_GEOJSON = 'rout.geojson';
+  }
+}
+
+function startAppOfflineMapOnly() {
+  guessTilesBaseFromUrl();
+  // محاولة أخيرة: ابحث عن أحدث مجلد متاح فعلاً
+  findLatestAvailableDate(TILES_BASE)
+    .then(function(foundDate) {
+      DATE = foundDate;
+      setDateBadge();
+      buildLayers();
+      switchLayer('sst', document.querySelector('.layer-tab'));
+      hideLoadingBar();
+    })
+    .catch(function() {
+      // آخر ملاذ: استخدم تاريخ اليوم
+      var now = new Date();
+      DATE = now.getFullYear() + '-'
+        + String(now.getMonth()+1).padStart(2,'0') + '-'
+        + String(now.getDate()).padStart(2,'0');
+      setDateBadge();
+      showDataBanner(
+        'لم يُعثر على مجلد بيانات — تأكد من رفع مجلد tiles/YYYY-MM-DD على الخادم.'
+      );
+      buildLayers();
+      switchLayer('sst', document.querySelector('.layer-tab'));
+      hideLoadingBar();
+    });
+}
+
+probeDatesJson()
+  .then(function(data) {
+    DATE = data.latest;
+    setDateBadge();
+    return fetchBoundsForDate();
+  })
+  .then(function() { startApp(); })
+  .catch(function() {
+    tryFallbackBoundsThenStart()
+      .then(function() { startApp(); })
+      .catch(function() {
+        document.getElementById('loading-text').textContent = 'تعذر الوصول لمجلد البيانات — عرض خريطة الأساس فقط';
+        startAppOfflineMapOnly();
+      });
+  });
+
+function layerBounds(id) {
+  if (UNIFIED_BOUNDS) return UNIFIED_BOUNDS;
+  return DEFAULT_BOUNDS[id] || DEFAULT_BOUNDS.sst;
+}
+
+function buildLayers() {
+  LAYERS = {
+    sst: {
+      label:"حرارة السطح (°C)",
+      img:TILES_BASE + DATE + "/sst.png",
+      bounds: layerBounds('sst'),
+    },
+    ssh: {
+      label:"شفافية المياه",
+      img:TILES_BASE + DATE + "/color.png",
+      bounds: layerBounds('ssh'),
+    },
+    vo: {
+      label:"تيار شمال/جنوب (m/s)",
+      img:TILES_BASE + DATE + "/vo.png",
+      bounds: layerBounds('vo'),
+    },
+  };
+}
+
+var map = L.map('map',{zoomControl:false,attributionControl:false});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+L.control.zoom({position:'bottomright'}).addTo(map);
+map.setView([36.2,0.3],9);
+
+var currentOverlay = null;
+var currentOpacity = 0.85;
+
+function switchLayer(id, tabEl) {
+  var cfg = LAYERS[id];
+  if (!cfg) return;
+  currentLayerId = id;
+  
+  // إزالة تنشيط جميع التبويبات العادية (ما عدا تبويب الأخطار)
+  document.querySelectorAll('.layer-tab:not(#dangers-tab)').forEach(function(t){ t.classList.remove('active'); });
+  
+  if (tabEl) tabEl.classList.add('active');
+  document.getElementById('active-label').textContent = cfg.label;
+  document.getElementById('loading-bar').style.display = 'flex';
+  document.getElementById('loading-text').textContent = 'جاري تحميل ' + cfg.label + '...';
+  
+  // إخفاء قائمة الأخطار
+  document.getElementById('dangers-dropdown').style.display = 'none';
+  
+  // إظهار مقياس الألوان للطبقات العادية
+  document.getElementById('legend').style.display = 'block';
+  
+  if (currentOverlay) { map.removeLayer(currentOverlay); currentOverlay = null; }
+  drawLegend(id);
+
+  if (cfg.tiles) {
+    currentOverlay = L.tileLayer(cfg.tiles, {
+      opacity: currentOpacity, minZoom: 6, maxZoom: 12, tms: cfg.tms || false,
+    }).addTo(map);
+    currentOverlay.on('load', function() {
+      document.getElementById('loading-bar').style.display = 'none';
+    });
+    document.getElementById('loading-bar').style.display = 'none';
+  } else {
+    var img = new Image();
+    img.onload = function() {
+      currentOverlay = L.imageOverlay(cfg.img, cfg.bounds, {opacity:currentOpacity}).addTo(map);
+      loadOverlayCanvas(cfg.img, cfg.bounds);
+      document.getElementById('loading-bar').style.display = 'none';
+    };
+    img.onerror = function() {
+      document.getElementById('loading-text').textContent = 'تعذر تحميل الطبقة — تحقق من الخادم أو المسار: ' + cfg.img;
+      hideLoadingBar();
+    };
+    img.src = cfg.img;
+  }
+}
+
+function setOpacity(val) {
+  currentOpacity = parseFloat(val);
+  if (currentOverlay) currentOverlay.setOpacity(currentOpacity);
+}
+
+map.on('zoomend',function(){
+  document.getElementById('info-zoom').textContent = map.getZoom();
+});
+
+var gpsMarker=null,gpsCircle=null,gpsWatchId=null,gpsActive=false;
+function toggleGPS(){ gpsActive ? stopGPS() : startGPS(); }
+function startGPS(){
+  if(!navigator.geolocation){alert('المتصفح لا يدعم GPS');return;}
+  var btn=document.getElementById('gps-btn'); btn.textContent='...';
+  gpsWatchId=navigator.geolocation.watchPosition(function(pos){
+    var lat=pos.coords.latitude,lon=pos.coords.longitude,acc=pos.coords.accuracy;
+    var icon=L.divIcon({className:'',html:'<div class="gps-pulse"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+    if(!gpsMarker){
+      gpsMarker=L.marker([lat,lon],{icon:icon,zIndexOffset:1000}).addTo(map).bindPopup('موقعك الحالي');
+      gpsCircle=L.circle([lat,lon],{radius:acc,color:'#06d6a0',fillColor:'#06d6a0',fillOpacity:0.1,weight:1}).addTo(map);
+      map.setView([lat,lon],12);
+    } else { gpsMarker.setLatLng([lat,lon]); gpsCircle.setLatLng([lat,lon]); gpsCircle.setRadius(acc); }
+    document.getElementById('info-lat').textContent=lat.toFixed(4)+'N';
+    document.getElementById('info-lon').textContent=lon.toFixed(4)+'E';
+    document.getElementById('info-gps').textContent=Math.round(acc)+'m';
+    btn.textContent='GPS نشط'; btn.classList.add('gps-on'); gpsActive=true;
+  },function(err){
+    document.getElementById('gps-btn').textContent='GPS';
+    alert('تعذر تحديد الموقع: '+err.message);
+  },{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+}
+function stopGPS(){
+  if(gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+  if(gpsMarker){map.removeLayer(gpsMarker);gpsMarker=null;}
+  if(gpsCircle){map.removeLayer(gpsCircle);gpsCircle=null;}
+  var btn=document.getElementById('gps-btn');
+  btn.textContent='GPS'; btn.classList.remove('gps-on');
+  document.getElementById('info-gps').textContent='--';
+  gpsActive=false; gpsWatchId=null;
+}
+
+// ===== سلم الألوان =====
+var LAYER_SCALES = {
+  sst:  { label:"حرارة السطح °C",      vmin:13,   vmax:28,  unit:"°C",  colormap:"sst"   },
+  ssh:  { label:"شفافية المياه",            vmin:-0.3, vmax:0.3, unit:"m",   colormap:"ssh"   },
+  vo:   { label:"تيار شمال/جنوب m/s",  vmin:-0.5, vmax:0.5, unit:"m/s", colormap:"ssh"   },
+  vhm0: { label:"ارتفاع الأمواج m",    vmin:0,    vmax:3,   unit:"m",   colormap:"waves" },
+};
+
+function drawLegend(id) {
+  var sc = LAYER_SCALES[id]; if (!sc) return;
+  document.getElementById('legend-title').textContent = sc.label;
+  document.getElementById('legend-min').textContent   = sc.vmin + ' ' + sc.unit;
+  document.getElementById('legend-max').textContent   = sc.vmax + ' ' + sc.unit;
+  var canvas = document.getElementById('legend-bar');
+  var ctx = canvas.getContext('2d');
+  var grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  if (sc.colormap === 'sst') {
+    grad.addColorStop(0,    '#0000ff');
+    grad.addColorStop(0.25, '#00ffff');
+    grad.addColorStop(0.5,  '#00ff00');
+    grad.addColorStop(0.75, '#ffff00');
+    grad.addColorStop(1,    '#ff0000');
+  } else if (sc.colormap === 'ssh') {
+    grad.addColorStop(0,   '#0000ff');
+    grad.addColorStop(0.5, '#ffffff');
+    grad.addColorStop(1,   '#ff0000');
+  } else if (sc.colormap === 'waves') {
+    grad.addColorStop(0,   '#ffffff');
+    grad.addColorStop(0.5, '#87ceeb');
+    grad.addColorStop(1,   '#0000ff');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// tooltip عند مرور المؤشر
+var currentLayerId = 'sst';
+var overlayBounds = null;
+var overlayImg = null;
+var overlayCanvas = null;
+
+function getValueAtPoint(latlng) {
+  var sc = LAYER_SCALES[currentLayerId]; if (!sc || !overlayBounds) return null;
+  var latMin = overlayBounds[0][0], lonMin = overlayBounds[0][1];
+  var latMax = overlayBounds[1][0], lonMax = overlayBounds[1][1];
+  if (latlng.lat < latMin || latlng.lat > latMax || latlng.lng < lonMin || latlng.lng > lonMax) return null;
+  if (!overlayCanvas) return null;
+  var ctx = overlayCanvas.getContext('2d');
+  var x = Math.floor((latlng.lng - lonMin) / (lonMax - lonMin) * overlayCanvas.width);
+  var y = Math.floor((latMax - latlng.lat) / (latMax - latMin) * overlayCanvas.height);
+  var px = ctx.getImageData(x, y, 1, 1).data;
+  if (px[3] < 10) return null;
+  // تحويل اللون إلى قيمة
+  var r = px[0]/255, g = px[1]/255, b = px[2]/255;
+  var norm;
+  if (sc.colormap === 'sst') {
+    // jet: أزرق=0 أحمر=1
+    if (b > 0.5 && r < 0.1) norm = 0.125 * g;
+    else if (g > 0.9 && b > 0.1) norm = 0.25 + 0.25 * (1-b);
+    else if (g > 0.9 && r < 0.1) norm = 0.5 * g;
+    else if (r > 0.9 && g > 0.5) norm = 0.5 + 0.25 * r;
+    else norm = 0.75 + 0.25 * (1-g);
+  } else if (sc.colormap === 'ssh') {
+    if (b > r) norm = 0.5 * (1 - b);
+    else norm = 0.5 + 0.5 * r;
+  } else {
+    norm = 1 - b;
+  }
+  norm = Math.max(0, Math.min(1, norm));
+  return (sc.vmin + norm * (sc.vmax - sc.vmin)).toFixed(2);
+}
+
+map.on('mousemove', function(e) {
+  document.getElementById('info-lat').textContent = e.latlng.lat.toFixed(4)+'N';
+  document.getElementById('info-lon').textContent = e.latlng.lng.toFixed(4)+'E';
+  var val = getValueAtPoint(e.latlng);
+  var tt = document.getElementById('map-tooltip');
+  var sc = LAYER_SCALES[currentLayerId];
+  if (val !== null && sc) {
+    tt.style.display = 'block';
+    tt.textContent = val + ' ' + sc.unit;
+    var mp = map.getContainer().getBoundingClientRect();
+    var cp = map.latLngToContainerPoint(e.latlng);
+    tt.style.left = (cp.x + 14) + 'px';
+    tt.style.top  = (cp.y - 10) + 'px';
+  } else {
+    tt.style.display = 'none';
+  }
+});
+map.on('mouseout', function() {
+  document.getElementById('map-tooltip').style.display = 'none';
+});
+
+// تحميل الصورة في canvas لقراءة البكسلات
+function loadOverlayCanvas(imgUrl, bounds) {
+  overlayBounds = bounds;
+  overlayCanvas = document.createElement('canvas');
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    overlayCanvas.width  = img.width;
+    overlayCanvas.height = img.height;
+    overlayCanvas.getContext('2d').drawImage(img, 0, 0);
+  };
+  img.src = imgUrl;
+}
+
+// ===== طبقة المسارات =====
+var routeLayer = null;
+var routeVisible = false;
+
+// ===== طبقة التيارات =====
+var current1Layer = null;
+var current1Visible = false;
+var current50Layer = null;
+var current50Visible = false;
+
+function toggleRoutes(btn) {
+  if (routeVisible) {
+    if (routeLayer) map.removeLayer(routeLayer);
+    routeVisible = false;
+    btn.style.background = 'rgba(6,214,160,0.1)';
+    btn.style.borderColor = 'rgba(6,214,160,0.3)';
+  } else {
+    loadRoutes(btn);
+  }
+}
+
+function loadRoutes(btn) {
+  if (routeLayer) {
+    routeLayer.addTo(map);
+    routeVisible = true;
+    btn.style.background = 'rgba(6,214,160,0.25)';
+    btn.style.borderColor = '#06d6a0';
+    return;
+  }
+
+  fetch(ROUTES_GEOJSON)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      routeLayer = L.geoJSON(data, {
+        style: function(feature) {
+          return {
+            color: '#06d6a0',
+            weight: 3,
+            opacity: 0.9,
+            dashArray: feature.properties.id === 1 ? null : '8,4',
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          layer.bindPopup(
+            '<div style="font-family:Tajawal;font-size:.9rem;color:#060d18;">' +
+            '<b>مسار ' + feature.properties.id + '</b></div>'
+          );
+        }
+      }).addTo(map);
+      routeVisible = true;
+      btn.style.background = 'rgba(6,214,160,0.25)';
+      btn.style.borderColor = '#06d6a0';
+    })
+    .catch(function(e) { console.error('خطأ في تحميل المسارات:', e); });
+}
+
+function toggleCurrent1(btn) {
+  if (current1Visible) {
+    if (current1Layer) map.removeLayer(current1Layer);
+    current1Visible = false;
+    btn.style.background = 'rgba(239,68,68,0.1)';
+    btn.style.borderColor = 'rgba(239,68,68,0.3)';
+  } else {
+    loadCurrent1(btn);
+  }
+}
+
+function toggleCurrent50(btn) {
+  if (current50Visible) {
+    if (current50Layer) map.removeLayer(current50Layer);
+    current50Visible = false;
+    btn.style.background = 'rgba(139,92,246,0.1)';
+    btn.style.borderColor = 'rgba(139,92,246,0.3)';
+  } else {
+    loadCurrent50(btn);
+  }
+}
+
+function loadCurrent1(btn) {
+  if (current1Layer) {
+    current1Layer.addTo(map);
+    current1Visible = true;
+    btn.style.background = 'rgba(239,68,68,0.25)';
+    btn.style.borderColor = '#ef4444';
+    return;
+  }
+
+  fetch('current1.geojson')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      current1Layer = L.geoJSON(data, {
+        style: function(feature) {
+          // تدرج الألوان من الأحمر (قوي) إلى البرتقالي إلى الأصفر (ضعيف)
+          var speed = feature.properties.speed || 0;
+          var color, fillColor;
+          
+          if (speed >= 0.35) {
+            color = '#dc2626'; fillColor = '#ef4444'; // أحمر - قوي
+          } else if (speed >= 0.15) {
+            color = '#ea580c'; fillColor = '#f97316'; // برتقالي - متوسط
+          } else {
+            color = '#fbbf24'; fillColor = '#fde047'; // أصفر - ضعيف
+          }
+          
+          return {
+            color: color,
+            weight: 3,
+            opacity: 0.9,
+            fillColor: fillColor,
+            fillOpacity: 0.4
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          var popupContent = '<div style="font-family:Tajawal;font-size:.9rem;color:#060d18;text-align:right;direction:rtl;">';
+          popupContent += '<b>🌊 تيار السطح (1م)</b><br>';
+          
+          if (feature.properties) {
+            if (feature.properties.name) {
+              popupContent += 'الاسم: ' + feature.properties.name + '<br>';
+            }
+            if (feature.properties.speed) {
+              popupContent += 'السرعة: ' + feature.properties.speed + ' كم/س<br>';
+            }
+            if (feature.properties.direction) {
+              popupContent += 'الاتجاه: ' + feature.properties.direction + '<br>';
+            }
+            if (feature.properties.depth) {
+              popupContent += 'العمق: ' + feature.properties.depth + ' م<br>';
+            }
+          }
+          
+          popupContent += '</div>';
+          layer.bindPopup(popupContent);
+        }
+      }).addTo(map);
+      current1Visible = true;
+      btn.style.background = 'rgba(239,68,68,0.25)';
+      btn.style.borderColor = '#ef4444';
+    })
+    .catch(function(e) { 
+      console.error('خطأ في تحميل تيار السطح:', e);
+      alert('فشل في تحميل بيانات تيار السطح. تأكد من وجود ملف current1.geojson');
+    });
+}
+
+function loadCurrent50(btn) {
+  if (current50Layer) {
+    current50Layer.addTo(map);
+    current50Visible = true;
+    btn.style.background = 'rgba(139,92,246,0.25)';
+    btn.style.borderColor = '#8b5cf6';
+    return;
+  }
+
+  fetch('current50.geojson')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      current50Layer = L.geoJSON(data, {
+        style: function(feature) {
+          // تدرج الألوان من البنفسجي (قوي) إلى الأزرق إلى الرمادي (ضعيف)
+          var speed = feature.properties.speed || 0;
+          var color, fillColor;
+          
+          if (speed >= 0.35) {
+            color = '#7c3aed'; fillColor = '#8b5cf6'; // بنفسجي - قوي
+          } else if (speed >= 0.15) {
+            color = '#2563eb'; fillColor = '#3b82f6'; // أزرق - متوسط
+          } else {
+            color = '#9ca3af'; fillColor = '#d1d5db'; // رمادي - ضعيف
+          }
+          
+          return {
+            color: color,
+            weight: 3,
+            opacity: 0.9,
+            fillColor: fillColor,
+            fillOpacity: 0.4
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          var popupContent = '<div style="font-family:Tajawal;font-size:.9rem;color:#060d18;text-align:right;direction:rtl;">';
+          popupContent += '<b>🌊 تيار العمق (50م)</b><br>';
+          
+          if (feature.properties) {
+            if (feature.properties.name) {
+              popupContent += 'الاسم: ' + feature.properties.name + '<br>';
+            }
+            if (feature.properties.speed) {
+              popupContent += 'السرعة: ' + feature.properties.speed + ' كم/س<br>';
+            }
+            if (feature.properties.direction) {
+              popupContent += 'الاتجاه: ' + feature.properties.direction + '<br>';
+            }
+            if (feature.properties.depth) {
+              popupContent += 'العمق: ' + feature.properties.depth + ' م<br>';
+            }
+          }
+          
+          popupContent += '</div>';
+          layer.bindPopup(popupContent);
+        }
+      }).addTo(map);
+      current50Visible = true;
+      btn.style.background = 'rgba(139,92,246,0.25)';
+      btn.style.borderColor = '#8b5cf6';
+    })
+    .catch(function(e) { 
+      console.error('خطأ في تحميل تيار العمق:', e);
+      alert('فشل في تحميل بيانات تيار العمق. تأكد من وجود ملف current50.geojson');
+    });
+}
+
+// ===== نظام الأكواد والتقييم =====
+var SHEET_URL = "https://script.google.com/macros/s/AKfycbyOfh8IUJ2iYZ1ct6USqKrLBJ7tYBztjk7wKYSle0mOvx-98lItVQoJ0J5WR6jpM__p/exec";
+
+var VALID_CODES = ["FISHER_01","FISHER_02","FISHER_03","FISHER_04","FISHER_05"];
+
+var currentUser   = null;
+var selectedRating = null;
+var gpsLat = null;
+var gpsLon = null;
+
+function doLogin() {
+  var code = document.getElementById('login-input').value.trim().toUpperCase();
+  if (VALID_CODES.indexOf(code) >= 0) {
+    currentUser = code;
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('report-fab').style.display = 'flex';
+    document.getElementById('correction-fab').style.display = 'flex';
+    startGPS();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+function openRating() {
+  closeCorrection();
+  selectedRating = null;
+  document.querySelectorAll('.rating-btn').forEach(function(b){ b.classList.remove('selected'); });
+  document.getElementById('boxes-wrap').classList.remove('show');
+  document.getElementById('boxes-input').value = '';
+  document.getElementById('send-status').style.display = 'none';
+  if (gpsLat && gpsLon) {
+    document.getElementById('rating-coords').textContent =
+      gpsLat.toFixed(4) + 'N    ' + gpsLon.toFixed(4) + 'E';
+  } else {
+    document.getElementById('rating-coords').textContent = 'GPS غير نشط — فعّله أولاً';
+  }
+  document.getElementById('rating-panel').classList.add('open');
+}
+
+function closeRating() {
+  document.getElementById('rating-panel').classList.remove('open');
+}
+
+function onObstacleTypeChange() {
+  var v = document.getElementById('obstacleType').value;
+  document.getElementById('correction-other-wrap').style.display = v === 'أخرى' ? 'block' : 'none';
+  if (v !== 'أخرى') document.getElementById('correction-note').value = '';
+}
+
+function openCorrection() {
+  closeRating();
+  var ob = document.getElementById('obstacleType');
+  ob.selectedIndex = 0;
+  document.getElementById('correction-other-wrap').style.display = 'none';
+  document.getElementById('correction-note').value = '';
+  document.getElementById('correction-send-status').style.display = 'none';
+  if (gpsLat && gpsLon) {
+    document.getElementById('correction-coords').textContent =
+      gpsLat.toFixed(4) + 'N    ' + gpsLon.toFixed(4) + 'E';
+  } else {
+    document.getElementById('correction-coords').textContent = 'GPS غير نشط — فعّله أولاً';
+  }
+  document.getElementById('correction-panel').classList.add('open');
+}
+
+function closeCorrection() {
+  document.getElementById('correction-panel').classList.remove('open');
+}
+
+function sendCorrection() {
+  if (!gpsLat || !gpsLon) { alert('فعّل GPS أولاً لتحديد موقعك'); return; }
+  var optionText = document.getElementById('obstacleType').value.trim();
+  if (!optionText) { alert('اختر نوع العائق من القائمة'); return; }
+
+  var now = new Date();
+  var d = now.toLocaleDateString('fr-DZ');
+  var t = now.toLocaleTimeString('fr-DZ');
+  var latStr = String(gpsLat.toFixed(6));
+  var lonStr = String(gpsLon.toFixed(6));
+  var extra = document.getElementById('correction-note').value.trim();
+
+  var payload = {
+    date:         d,
+    time:         t,
+    code:         currentUser,
+    lat:          latStr,
+    lon:          lonStr,
+    obstacleType: optionText,
+    rating:       optionText,
+    note:         extra ? (optionText + ' — ' + extra) : optionText,
+
+    reportType:   'correction',
+    category:     optionText,
+    categoryText: optionText,
+    optionText:   optionText,
+    hazardLabel:  optionText,
+
+    sheetRow:     [d, t, currentUser, latStr, lonStr, optionText, extra],
+  };
+  var status = document.getElementById('correction-send-status');
+  status.style.display = 'block';
+  status.style.color = 'var(--gold)';
+  status.textContent = 'جاري الإرسال...';
+  fetch(SHEET_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+  })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function() {
+      status.style.color = 'var(--green)';
+      status.textContent = 'تم الإرسال بنجاح!';
+      setTimeout(closeCorrection, 2000);
+    })
+    .catch(function(err) {
+      status.style.color = '#ef233c';
+      status.textContent = 'فشل الإرسال — تحقق من الاتصال أو إعدادات النشر';
+      console.error(err);
+    });
+}
+
+function selectRating(btn, rating) {
+  document.querySelectorAll('.rating-btn').forEach(function(b){ b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  selectedRating = rating;
+  if (rating === 'صيد') {
+    document.getElementById('boxes-wrap').classList.add('show');
+  } else {
+    document.getElementById('boxes-wrap').classList.remove('show');
+  }
+}
+
+function sendRating() {
+  if (!selectedRating) { alert('اختر نوع التقييم أولاً'); return; }
+  if (!gpsLat || !gpsLon) { alert('فعّل GPS أولاً لتحديد موقعك'); return; }
+  var now = new Date();
+  var payload = {
+    date:   now.toLocaleDateString('fr-DZ'),
+    time:   now.toLocaleTimeString('fr-DZ'),
+    code:   currentUser,
+    lat:    gpsLat.toFixed(6),
+    lon:    gpsLon.toFixed(6),
+    rating: selectedRating,
+    boxes:  document.getElementById('boxes-input').value,
+  };
+  var status = document.getElementById('send-status');
+  status.style.display = 'block';
+  status.style.color = 'var(--gold)';
+  status.textContent = 'جاري الإرسال...';
+  fetch(SHEET_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+  })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function() {
+      status.style.color = 'var(--green)';
+      status.textContent = 'تم الإرسال بنجاح!';
+      setTimeout(closeRating, 2000);
+    })
+    .catch(function(err) {
+      status.style.color = '#ef233c';
+      status.textContent = 'فشل الإرسال — راجع إعداد النشر في Apps Script (أي مستخدم) أو جرّب من HTTPS';
+      console.error(err);
+    });
+}
+
+navigator.geolocation && navigator.geolocation.watchPosition(function(pos) {
+  gpsLat = pos.coords.latitude;
+  gpsLon = pos.coords.longitude;
+}, function(){}, { enableHighAccuracy:true });
+
+</script>
+
+<!-- ===== نافذة الطقس البحري ===== -->
+<div class="weather-panel" id="weather-panel">
+  <div class="weather-header">
+    <div>
+      <div class="weather-title">⛅ أحوال الطقس البحري</div>
+      <div class="weather-sub">ميناء سيدي لخضر — 36.25°N / 0.30°E</div>
+    </div>
+    <button class="weather-close" onclick="closeWeather()">✕</button>
+  </div>
+  <div class="weather-body" id="weather-body">
+    <div class="weather-loading" id="weather-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">جاري تحميل بيانات الطقس...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var WEATHER_LAT = 36.25;
+var WEATHER_LON = 0.30;
+var weatherLoaded = false;
+var weatherTab = 'forecast';
+
+function openWeather() {
+  document.getElementById('weather-panel').classList.add('open');
+  if (!weatherLoaded) fetchWeather();
+}
+function closeWeather() {
+  document.getElementById('weather-panel').classList.remove('open');
+}
+function switchWeatherTab(tab) {
+  weatherTab = tab;
+  document.getElementById('wtab-forecast').classList.toggle('wtab-active', tab==='forecast');
+  document.getElementById('wtab-about').classList.toggle('wtab-active', tab==='about');
+  document.getElementById('weather-forecast-view').style.display = tab==='forecast' ? 'block' : 'none';
+  document.getElementById('weather-about-view').style.display = tab==='about' ? 'block' : 'none';
+}
+
+function fetchWeather() {
+  var urlMarine = 'https://marine-api.open-meteo.com/v1/marine'
+    + '?latitude=' + WEATHER_LAT + '&longitude=' + WEATHER_LON
+    + '&hourly=wave_height,wind_wave_height'
+    + '&forecast_days=7&timezone=Africa%2FAlgiers';
+  var urlAtm = 'https://api.open-meteo.com/v1/forecast'
+    + '?latitude=' + WEATHER_LAT + '&longitude=' + WEATHER_LON
+    + '&hourly=wind_speed_10m,wind_direction_10m'
+    + '&wind_speed_unit=kmh&forecast_days=7&timezone=Africa%2FAlgiers';
+
+  Promise.all([
+    fetch(urlMarine).then(function(r){ if(!r.ok) throw new Error('marine'); return r.json(); }),
+    fetch(urlAtm).then(function(r){ if(!r.ok) throw new Error('atm'); return r.json(); })
+  ])
+  .then(function(res){ renderWeather(res[0], res[1]); weatherLoaded = true; })
+  .catch(function(err){
+    document.getElementById('weather-body').innerHTML =
+      '<div class="weather-error">⚠️ تعذر تحميل بيانات الطقس<br><small>' + err.message + '</small><br><br>'
+      + '<button onclick="weatherLoaded=false;fetchWeather()" style="padding:8px 18px;background:var(--gold);border:none;'
+      + 'border-radius:8px;color:#000;font-family:Tajawal;cursor:pointer;font-weight:700;">إعادة المحاولة</button></div>';
+  });
+}
+
+function waveClass(v){ return v<0.5?'wv-low':v<1.5?'wv-mid':'wv-high'; }
+function windClass(v){ return v<20?'ws-low':v<40?'ws-mid':'ws-high'; }
+function windDirLabel(deg){
+  var d=['ش','شش-ش','ش-ش','شغ-ش','شغ','شغ-غ','غ-ش','شغ-غ','غ','جغ-غ','غ-ج','جغ-غ','جغ','جغ-ج','ج-غ','جش-ج'];
+  return d[Math.round(deg/22.5)%16];
+}
+function fmtHour(s){ return s.split('T')[1]?s.split('T')[1].substring(0,5):s; }
+function fmtDay(s){
+  var dt=new Date(s);
+  var days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  var months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  return days[dt.getDay()]+' '+dt.getDate()+' '+months[dt.getMonth()];
+}
+
+// ===== ثوابت الأمان =====
+var WAVE_LIMIT = 1.1;   // م
+var WIND_LIMIT = 30;    // كم/س
+var TRIP_HOURS = 10;    // ساعات الرحلة (النافذة الكاملة 17:00→10:00 = 17س)
+var DEPART_HOUR = 17;   // ساعة الخروج
+
+function assessDay(dayKey, allIndices, times, waveH, windSpd) {
+  // نافذة: 17:00 هذا اليوم → 10:00 اليوم التالي فقط (17 ساعة كحد أقصى)
+  // نحسب تاريخ اليوم التالي
+  var nextDay = new Date(dayKey + 'T12:00');
+  nextDay.setDate(nextDay.getDate() + 1);
+  var nextDayKey = nextDay.toISOString().substring(0,10);
+
+  var RETURN_HOUR = 10; // أقصى ساعة عودة
+
+  var nightIdx = [];
+  for(var k=0; k<allIndices.length; k++){
+    var i = allIndices[k];
+    var dt = times[i];
+    var dayPart = dt.split('T')[0];
+    var h = parseInt(dt.split('T')[1].substring(0,2),10);
+    // ساعات اليوم نفسه من 17:00 فصاعداً
+    if(dayPart === dayKey && h >= DEPART_HOUR) nightIdx.push(i);
+    // ساعات اليوم التالي من 00:00 حتى 10:00 فقط
+    else if(dayPart === nextDayKey && h <= RETURN_HOUR) nightIdx.push(i);
+  }
+  // ترتيب حسب الوقت
+  nightIdx.sort(function(a,b){ return times[a] < times[b] ? -1 : 1; });
+
+  if(nightIdx.length === 0) return {cls:'red', icon:'❌', badge:'لا توجد بيانات', desc:'لا تتوفر بيانات لهذه الفترة.', window:''};
+
+  // حساب أطول فترة هادئة متواصلة
+  // نحتاج أيضاً تتبع مؤشرات أفضل نافذة لحساب أسوأ قيمة داخلها فقط
+  var maxConsec=0, curConsec=0, bestStart='', consecStart='';
+  var bestStartIdx=0, consecStartIdx=0;
+  var worstWaveInWindow=0, worstWindInWindow=0;
+  // متغيرات للنافذة الحالية
+  var curWave=0, curWind=0;
+
+  for(var k=0; k<nightIdx.length; k++){
+    var i=nightIdx[k];
+    var wav=waveH[i]||0;
+    var spd=windSpd[i]||0;
+    if(wav<=WAVE_LIMIT && spd<=WIND_LIMIT){
+      curConsec++;
+      if(curConsec===1){ consecStart=times[i].replace('T',' ').substring(0,16); consecStartIdx=k; curWave=0; curWind=0; }
+      if(wav>curWave) curWave=wav;
+      if(spd>curWind) curWind=spd;
+      if(curConsec>maxConsec){
+        maxConsec=curConsec; bestStart=consecStart; bestStartIdx=consecStartIdx;
+        worstWaveInWindow=curWave; worstWindInWindow=curWind;
+      }
+    } else {
+      curConsec=0; consecStart=''; curWave=0; curWind=0;
+    }
+  }
+
+  // للحالة الحمراء فقط نعرض أسوأ قيمة في كامل النافذة
+  var worstWaveAll=0, worstWindAll=0;
+  for(var k=0; k<nightIdx.length; k++){
+    var i=nightIdx[k];
+    if((waveH[i]||0)>worstWaveAll) worstWaveAll=waveH[i]||0;
+    if((windSpd[i]||0)>worstWindAll) worstWindAll=windSpd[i]||0;
+  }
+
+  var waveTxt=worstWaveInWindow.toFixed(2)+' م';
+  var windTxt=Math.round(worstWindInWindow)+' كم/س';
+  var waveTxtAll=worstWaveAll.toFixed(2)+' م';
+  var windTxtAll=Math.round(worstWindAll)+' كم/س';
+
+  // حساب وقت النهاية بشكل صحيح عبر التاريخ
+  function addHours(dtStr, h){
+    var d=new Date(dtStr.replace(' ','T')+':00');
+    d.setHours(d.getHours()+h);
+    return (d.getHours()<10?'0':'')+d.getHours()+':00'
+      +' ('+(d.getDate()===new Date(dtStr.replace(' ','T')+':00').getDate()?'نفس اليوم':'اليوم التالي')+')';
+  }
+
+  if(maxConsec>=TRIP_HOURS){
+    return {
+      cls:'green', icon:'✅', badge:'فرصة ذهبية',
+      desc:'ظروف مناسبة للخروج — الرياح '+windTxt+' والأمواج '+waveTxt,
+      window:'الخروج: '+bestStart.split(' ')[1]+' ← العودة: '+addHours(bestStart, maxConsec)+' ('+maxConsec+' ساعة هادئة)'
+    };
+  } else if(maxConsec>=6){
+    return {
+      cls:'orange', icon:'⚠️', badge:'مخاطرة — نافذة ضيقة',
+      desc:'فترة هادئة '+maxConsec+' ساعة فقط (الرحلة تحتاج 10). الرياح قد تبلغ '+windTxt+' والأمواج '+waveTxt,
+      window:'أفضل نافذة: '+bestStart.split(' ')[1]+' ← '+addHours(bestStart, maxConsec)
+    };
+  } else {
+    return {
+      cls:'red', icon:'❌', badge:'لا توجد فرصة',
+      desc:'الظروف لا تسمح — الرياح قد تصل '+windTxtAll+' والأمواج '+waveTxtAll+'. لم تتوفر 6 ساعات متواصلة هادئة.',
+      window:maxConsec>0?'أفضل ما وُجد: '+maxConsec+' ساعة فقط':'لا توجد ساعة هادئة واحدة'
+    };
+  }
+}
+
+function renderWeather(marine, atm) {
+  var times=marine.hourly.time;
+  var waveH=marine.hourly.wave_height;
+  var windWH=marine.hourly.wind_wave_height;
+  var windSpd=atm.hourly.wind_speed_10m;
+  var windDeg=atm.hourly.wind_direction_10m;
+
+  // تجميع حسب اليوم
+  var days={};
+  for(var i=0;i<times.length;i++){
+    var dk=times[i].split('T')[0];
+    if(!days[dk]) days[dk]=[];
+    days[dk].push(i);
+  }
+  var html='';
+  var dayKeys=Object.keys(days);
+
+  // بناء مصفوفة كل المؤشرات مرتبة للتمرير لـ assessDay
+  var allIndices=[];
+  for(var d=0;d<dayKeys.length;d++){
+    var dkk=dayKeys[d];
+    for(var ii=0;ii<days[dkk].length;ii++) allIndices.push(days[dkk][ii]);
+  }
+  allIndices.sort(function(a,b){ return times[a]<times[b]?-1:1; });
+
+  // ===== الأيام 1-3: تقييم + جدول =====
+  var mainDays = dayKeys.slice(0,3);
+  var extDays  = dayKeys.slice(3);
+
+  html += '<div class="section-title">🎣 جدوى الصيد بالضوء</div>';
+  html += '<div class="trip-cards">';
+  for(var d=0;d<mainDays.length;d++){
+    var dk=mainDays[d];
+    var res=assessDay(dk, allIndices, times, waveH, windSpd);
+    html += '<div class="trip-card '+res.cls+'">'
+      +'<div class="trip-card-top">'
+      +'<span class="trip-card-icon">'+res.icon+'</span>'
+      +'<span class="trip-card-day">'+fmtDay(dk+'T12:00')+'</span>'
+      +'<span class="trip-card-badge">'+res.badge+'</span>'
+      +'</div>'
+      +'<div class="trip-card-desc">'+res.desc+'</div>'
+      +(res.window?'<div class="trip-window">⏱ '+res.window+'</div>':'')
+      +'</div>';
+  }
+  html += '</div>';
+
+  // ===== الأيام 4-6: شريط منسدل للتقييم فقط =====
+  if(extDays.length > 0){
+    html += '<div class="extended-toggle" id="ext-toggle" onclick="toggleExtended()">'
+      +'<span style="font-size:1.1rem;">📅</span>'
+      +'<span class="extended-toggle-label">التوقعات الموسعة — اليوم '+(mainDays.length+1)+' إلى '+(mainDays.length+extDays.length)+'</span>'
+      +'<span class="extended-toggle-sub">اضغط لعرض التقييم</span>'
+      +'<span class="extended-toggle-arrow">▼</span>'
+      +'</div>';
+    html += '<div class="extended-body" id="ext-body">';
+    html += '<div class="trip-cards" style="margin-top:10px;">';
+    for(var d=0;d<extDays.length;d++){
+      var dk=extDays[d];
+      var res=assessDay(dk, allIndices, times, waveH, windSpd);
+      html += '<div class="trip-card '+res.cls+'">'
+        +'<div class="trip-card-top">'
+        +'<span class="trip-card-icon">'+res.icon+'</span>'
+        +'<span class="trip-card-day">'+fmtDay(dk+'T12:00')+'</span>'
+        +'<span class="trip-card-badge">'+res.badge+'</span>'
+        +'</div>'
+        +'<div class="trip-card-desc">'+res.desc+'</div>'
+        +(res.window?'<div class="trip-window">⏱ '+res.window+'</div>':'')
+        +'</div>';
+    }
+    html += '</div></div>';
+  }
+
+  // ===== الجدول التفصيلي للأيام 1-3 فقط =====
+  html += '<div class="section-title">📊 التفاصيل الساعية</div>';
+
+  for(var d=0;d<mainDays.length;d++){
+    var dk=mainDays[d];
+    var dk=dayKeys[d];
+    var idxs=days[dk]||[];
+    html+='<div class="weather-day-block">'
+      +'<div class="weather-day-title">📅 '+fmtDay(dk+'T12:00')+'</div>'
+      +'<table class="weather-table"><thead><tr>'
+      +'<th>الساعة</th><th>ارتفاع الأمواج</th><th>موج الريح</th><th>سرعة الريح</th><th>اتجاه الريح</th>'
+      +'</tr></thead><tbody>';
+    for(var j=0;j<idxs.length;j++){
+      var idx=idxs[j];
+      var wh=waveH[idx]!=null?waveH[idx].toFixed(2)+' م':'—';
+      var wwh=windWH[idx]!=null?windWH[idx].toFixed(2)+' م':'—';
+      var ws=windSpd[idx]!=null?windSpd[idx].toFixed(1)+' كم/س':'—';
+      var wd=windDeg[idx]!=null?windDirLabel(windDeg[idx]):'—';
+      var spd=windSpd[idx]||0;
+      var wav=waveH[idx]||0;
+      var wwv=windWH[idx]||0;
+
+      // شارة الرياح
+      var windBadgeColor = spd>=40?'#ef233c':spd>=20?'#fb923c':'';
+      var wsDisplay = windBadgeColor
+        ? '<span style="display:inline-block;background:'+windBadgeColor+';color:#fff;'
+          +'font-weight:700;padding:2px 8px;border-radius:20px;font-size:.72rem;">'+ws+'</span>'
+        : ws;
+
+      // شارة الأمواج الكلية
+      var wavColor = wav>2?'#7c3aed':wav>1.2?'#ef233c':wav>=0.9?'#f59e0b':'';
+      var whDisplay = wavColor
+        ? '<span style="display:inline-block;background:'+wavColor+';color:#fff;'
+          +'font-weight:700;padding:2px 8px;border-radius:20px;font-size:.72rem;">'+wh+'</span>'
+        : wh;
+
+      // شارة موج الريح
+      var wwvColor = wwv>2?'#7c3aed':wwv>1.2?'#ef233c':wwv>=0.9?'#f59e0b':'';
+      var wwhDisplay = wwvColor
+        ? '<span style="display:inline-block;background:'+wwvColor+';color:#fff;'
+          +'font-weight:700;padding:2px 8px;border-radius:20px;font-size:.72rem;">'+wwh+'</span>'
+        : wwh;
+
+      html+='<tr>'
+        +'<td>'+fmtHour(times[idx])+'</td>'
+        +'<td>'+whDisplay+'</td>'
+        +'<td>'+wwhDisplay+'</td>'
+        +'<td>'+wsDisplay+'</td>'
+        +'<td>'+wd+'</td>'
+        +'</tr>';
+    }
+    html+='</tbody></table></div>';
+  }
+  html+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:.62rem;color:var(--dim);padding:4px 2px;">'
+    +'<span style="font-size:.62rem;color:var(--dim);">الرياح: </span>'
+    +'<span style="background:#fb923c;color:#fff;padding:1px 7px;border-radius:12px;font-size:.6rem;">20–40 كم/س</span> '
+    +'<span style="background:#ef233c;color:#fff;padding:1px 7px;border-radius:12px;font-size:.6rem;">+40 كم/س</span>'
+    +'<br>'
+    +'<span style="font-size:.62rem;color:var(--dim);">الأمواج: </span>'
+    +'<span style="background:#f59e0b;color:#fff;padding:1px 7px;border-radius:12px;font-size:.6rem;">0.9–1.2 م</span> '
+    +'<span style="background:#ef233c;color:#fff;padding:1px 7px;border-radius:12px;font-size:.6rem;">1.2–2 م</span> '
+    +'<span style="background:#7c3aed;color:#fff;padding:1px 7px;border-radius:12px;font-size:.6rem;">+2 م</span>'
+    +'<span style="margin-right:auto;font-size:.58rem;">المصدر: Open-Meteo Marine API</span>'
+    +'</div>';
+  document.getElementById('weather-body').innerHTML=html;
+}
+
+function toggleExtended(){
+  var toggle=document.getElementById('ext-toggle');
+  var body=document.getElementById('ext-body');
+  if(!toggle||!body) return;
+  var isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  toggle.classList.toggle('open',!isOpen);
+  toggle.querySelector('.extended-toggle-sub').textContent=
+    isOpen?'اضغط لعرض التقييم':'اضغط للإخفاء';
+}
+
+// ===== وظائف الأخطار =====
+var dangerLayers = {};
+var activeDangers = new Set();
+
+function toggleDangersDropdown(tab) {
+  var dropdown = document.getElementById('dangers-dropdown');
+  var isVisible = dropdown.style.display !== 'none';
+  
+  if (isVisible) {
+    dropdown.style.display = 'none';
+    tab.classList.remove('active');
+  } else {
+    dropdown.style.display = 'block';
+    tab.classList.add('active');
+  }
+}
+
+function toggleDanger(type, isChecked) {
+  if (isChecked) {
+    // إضافة الخطر إلى القائمة النشطة
+    activeDangers.add(type);
+    loadDangerLayer(type);
+  } else {
+    // إزالة الخطر من القائمة النشطة
+    activeDangers.delete(type);
+    removeDangerLayer(type);
+  }
+  
+  // تحديث حالة تبويب الأخطار
+  updateDangersTabStatus();
+}
+
+function loadDangerLayer(type) {
+  if (dangerLayers[type]) {
+    // إذا كانت الطبقة محملة بالفعل، فقط أضفها للخريطة
+    dangerLayers[type].addTo(map);
+    return;
+  }
+  
+  if (type === 'rocks') {
+    fetch('rocks.geojson')
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        dangerLayers[type] = L.geoJSON(data, {
+          style: function(feature) {
+            return {
+              color: '#dc2626',
+              weight: 2,
+              opacity: 0.8,
+              fillColor: '#ef4444',
+              fillOpacity: 0.3
+            };
+          },
+          pointToLayer: function(feature, latlng) {
+            return L.circleMarker(latlng, {
+              radius: 6,
+              fillColor: '#dc2626',
+              color: '#fff',
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0.8
+            });
+          },
+          onEachFeature: function(feature, layer) {
+            if (feature.properties) {
+              var popupContent = '<div style="text-align:right;direction:rtl;font-family:Tajawal,sans-serif;">';
+              popupContent += '<h4 style="margin:0 0 8px 0;color:#dc2626;">⚠️ منطقة صخرية</h4>';
+              for (var key in feature.properties) {
+                if (feature.properties[key]) {
+                  popupContent += '<div><strong>' + key + ':</strong> ' + feature.properties[key] + '</div>';
+                }
+              }
+              popupContent += '</div>';
+              layer.bindPopup(popupContent);
+            }
+          }
+        }).addTo(map);
+      })
+      .catch(function(error) {
+        console.error('Error loading rocks data:', error);
+        alert('تعذر تحميل بيانات المناطق الصخرية');
+        // إلغاء الاختيار في حال فشل التحميل
+        document.getElementById('danger-rocks').checked = false;
+        activeDangers.delete('rocks');
+      });
+  } else if (type === 'wrecks') {
+    console.log('Loading wrecks from hotam.geojson...');
+    fetch('hotam.geojson')
+      .then(function(response) { 
+        console.log('Response status:', response.status);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json(); 
+      })
+      .then(function(data) {
+        console.log('Wrecks data loaded:', data.features.length, 'features');
+        dangerLayers[type] = L.geoJSON(data, {
+          style: function(feature) {
+            return {
+              color: '#7c3aed',
+              weight: 3,
+              opacity: 0.9,
+              fillColor: '#8b5cf6',
+              fillOpacity: 0.4
+            };
+          },
+          pointToLayer: function(feature, latlng) {
+            return L.marker(latlng, {
+              icon: L.divIcon({
+                className: '',
+                html: '<div style="background:#7c3aed;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;">⚓</div>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+              })
+            });
+          },
+          onEachFeature: function(feature, layer) {
+            if (feature.properties) {
+              var popupContent = '<div style="text-align:right;direction:rtl;font-family:Tajawal,sans-serif;">';
+              popupContent += '<h4 style="margin:0 0 8px 0;color:#7c3aed;">⚓ حطام سفينة</h4>';
+              for (var key in feature.properties) {
+                if (feature.properties[key]) {
+                  popupContent += '<div><strong>' + key + ':</strong> ' + feature.properties[key] + '</div>';
+                }
+              }
+              popupContent += '</div>';
+              layer.bindPopup(popupContent);
+            }
+          }
+        }).addTo(map);
+      })
+      .catch(function(error) {
+        console.error('Error loading wrecks data:', error);
+        alert('تعذر تحميل بيانات حطام السفن');
+        document.getElementById('danger-wrecks').checked = false;
+        activeDangers.delete('wrecks');
+      });
+  } else if (type === 'debris') {
+    console.log('Loading debris from mokhalfat.geojson...');
+    fetch('mokhalfat.geojson')
+      .then(function(response) { 
+        console.log('Response status:', response.status);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json(); 
+      })
+      .then(function(data) {
+        console.log('Debris data loaded:', data.features.length, 'features');
+        dangerLayers[type] = L.geoJSON(data, {
+          style: function(feature) {
+            return {
+              color: '#ea580c',
+              weight: 2,
+              opacity: 0.8,
+              fillColor: '#f97316',
+              fillOpacity: 0.3
+            };
+          },
+          pointToLayer: function(feature, latlng) {
+            return L.marker(latlng, {
+              icon: L.divIcon({
+                className: '',
+                html: '<div style="background:#ea580c;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;">🗑️</div>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+              })
+            });
+          },
+          onEachFeature: function(feature, layer) {
+            if (feature.properties) {
+              var popupContent = '<div style="text-align:right;direction:rtl;font-family:Tajawal,sans-serif;">';
+              popupContent += '<h4 style="margin:0 0 8px 0;color:#ea580c;">🗑️ مخلفات</h4>';
+              for (var key in feature.properties) {
+                if (feature.properties[key]) {
+                  popupContent += '<div><strong>' + key + ':</strong> ' + feature.properties[key] + '</div>';
+                }
+              }
+              popupContent += '</div>';
+              layer.bindPopup(popupContent);
+            }
+          }
+        }).addTo(map);
+      })
+      .catch(function(error) {
+        console.error('Error loading debris data:', error);
+        alert('تعذر تحميل بيانات المخلفات');
+        document.getElementById('danger-debris').checked = false;
+        activeDangers.delete('debris');
+      });
+  } else {
+    // لأنواع الأخطار الأخرى - حالياً فقط رسالة
+    var dangerNames = {
+      'cables': 'كابلات'
+    };
+    
+    // رسالة مؤقتة للأنواع غير المتاحة
+    var message = document.createElement('div');
+    message.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(6,13,24,0.95);border:1px solid var(--border);border-radius:12px;padding:20px;color:var(--text);text-align:center;z-index:1000;';
+    message.innerHTML = '<h3 style="margin:0 0 10px 0;">' + (dangerNames[type] || type) + '</h3><p>بيانات هذا النوع من الأخطار غير متاحة حالياً</p>';
+    document.body.appendChild(message);
+    setTimeout(function() { 
+      document.body.removeChild(message);
+      // إلغاء الاختيار بعد إغلاق الرسالة
+      document.getElementById('danger-' + type).checked = false;
+      activeDangers.delete(type);
+    }, 3000);
+  }
+}
+
+function removeDangerLayer(type) {
+  if (dangerLayers[type]) {
+    map.removeLayer(dangerLayers[type]);
+  }
+}
+
+function updateDangersTabStatus() {
+  var dangersTab = document.getElementById('dangers-tab');
+  var activeLabel = document.getElementById('active-label');
+  
+  if (activeDangers.size > 0) {
+    dangersTab.classList.add('active');
+    // عرض عدد الأخطار النشطة
+    if (activeDangers.size === 1) {
+      var dangerNames = {
+        'rocks': 'مناطق صخرية',
+        'wrecks': 'حطام سفن',
+        'cables': 'كابلات',
+        'debris': 'مخلفات'
+      };
+      activeLabel.textContent = dangerNames[Array.from(activeDangers)[0]] || 'أخطار';
+    } else {
+      activeLabel.textContent = 'أخطار (' + activeDangers.size + ')';
+    }
+    // إخفاء مقياس الألوان عند عرض الأخطار
+    document.getElementById('legend').style.display = 'none';
+  } else {
+    dangersTab.classList.remove('active');
+    // إذا لم يكن هناك طبقة أخرى نشطة، أعد تسمية التبويب
+    if (!document.querySelector('.layer-tab.active:not(#dangers-tab)')) {
+      activeLabel.textContent = 'اختر طبقة';
+    }
+    // أظهر مقياس الألوان إذا كانت هناك طبقة عادية نشطة
+    var activeLayer = document.querySelector('.layer-tab.active:not(#dangers-tab)');
+    if (activeLayer) {
+      document.getElementById('legend').style.display = 'block';
+    }
+  }
+}
+</script>
+</body>
+</html>
