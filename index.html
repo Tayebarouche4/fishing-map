@@ -10,226 +10,26 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="خريطة الصيد">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS وعلامات النجمة.">
-<title>خريطة الصياد التفاعلية - العلامات</title>
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
+<title>خريطة الصياد التفاعلية</title>
 
 <!-- مكتبات خارجية -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 
-<style>
-  /* ========== الأنماط الأساسية (محسنة) ========== */
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  body {
-    font-family: 'Tajawal', sans-serif;
-    background: #030712;
-    overflow: hidden;
-    height: 100vh;
-    width: 100%;
-  }
-  #map {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-    background: #0a0f1e;
-  }
-  :root {
-    --bg-glass: rgba(10, 15, 30, 0.9);
-    --border: rgba(255,255,255,0.15);
-    --text: #f1f5f9;
-  }
-  /* شاشة التحميل */
-  .loading-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #0a0f1e;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.5s;
-  }
-  .spinner {
-    width: 48px;
-    height: 48px;
-    border: 4px solid #2dd4bf;
-    border-top-color: #f59e0b;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { color: white; font-size: 1rem; }
-  
-  /* شاشة الدخول */
-  .login-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(12px);
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .login-box {
-    background: #111827;
-    border-radius: 32px;
-    padding: 32px 24px;
-    width: 90%;
-    max-width: 360px;
-    text-align: center;
-    border: 1px solid #334155;
-  }
-  .login-icon { font-size: 64px; margin-bottom: 12px; }
-  .login-title { font-size: 26px; font-weight: 900; color: #facc15; }
-  .login-sub { color: #94a3b8; margin: 12px 0; font-size: 14px; }
-  .login-input {
-    width: 100%;
-    padding: 14px;
-    border-radius: 60px;
-    border: none;
-    background: #1e293b;
-    color: white;
-    text-align: center;
-    font-size: 18px;
-    margin: 16px 0;
-  }
-  .login-btn {
-    background: #2dd4bf;
-    border: none;
-    padding: 12px;
-    width: 100%;
-    border-radius: 60px;
-    font-weight: bold;
-    font-size: 18px;
-    color: #0f172a;
-  }
-  .login-error { color: #ef4444; margin-top: 12px; font-size: 13px; display: none; }
-  
-  /* الأزرار العلوية */
-  .top-bar {
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    right: 12px;
-    z-index: 500;
-    background: rgba(6, 13, 24, 0.85);
-    backdrop-filter: blur(16px);
-    border-radius: 28px;
-    padding: 10px 16px;
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .brand-icon { font-size: 32px; }
-  .brand-text { font-weight: 900; color: #facc15; }
-  .layer-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .layer-tab {
-    background: rgba(30,41,59,0.7);
-    padding: 6px 14px;
-    border-radius: 40px;
-    font-size: 13px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid #334155;
-  }
-  .layer-tab.active { background: #2dd4bf; color: #0f172a; border-color: #2dd4bf; }
-  .header-btns { display: flex; gap: 8px; }
-  .hbtn { background: #1e293b; border: none; padding: 6px 12px; border-radius: 30px; color: white; }
-  .measurement-fab, .star-fab {
-    position: fixed;
-    bottom: 100px;
-    right: 16px;
-    width: 56px;
-    height: 56px;
-    background: #0f172a;
-    border-radius: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    cursor: pointer;
-    z-index: 400;
-    border: 1px solid #facc15;
-    box-shadow: 0 4px 12px black;
-  }
-  .star-fab { bottom: 170px; background: #1e1b2e; border-color: #f59e0b; }
-  .measurement-toolbar {
-    position: fixed;
-    bottom: 100px;
-    right: 80px;
-    background: #0f172a;
-    border-radius: 48px;
-    display: flex;
-    gap: 8px;
-    padding: 8px 16px;
-    z-index: 400;
-    border: 1px solid #facc15;
-  }
-  .star-panel {
-    position: fixed;
-    bottom: 170px;
-    right: 80px;
-    background: #0f172a;
-    border-radius: 48px;
-    display: flex;
-    gap: 12px;
-    padding: 10px 20px;
-    z-index: 400;
-    border: 1px solid #facc15;
-    backdrop-filter: blur(8px);
-  }
-  .star-option {
-    font-size: 32px;
-    cursor: pointer;
-    transition: transform 0.1s;
-    filter: drop-shadow(0 0 4px black);
-  }
-  .star-option:hover { transform: scale(1.2); }
-  .info-panel {
-    position: fixed;
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
-    background: rgba(0,0,0,0.7);
-    border-radius: 24px;
-    padding: 8px;
-    display: flex;
-    justify-content: space-around;
-    z-index: 400;
-  }
-  .info-card { text-align: center; color: white; font-size: 12px; }
-  .legend { position: fixed; bottom: 80px; left: 12px; background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px; z-index: 300; }
-  .rating-panel, .correction-panel, .weather-panel, .moon-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #111827; border-radius: 28px; padding: 20px; z-index: 1000; width: 90%; max-width: 380px; border: 1px solid #facc15; display: none; flex-direction: column; gap: 12px; }
-  .send-btn, .cancel-btn { padding: 10px; border-radius: 40px; border: none; font-weight: bold; }
-  .send-btn { background: #10b981; }
-  .cancel-btn { background: #475569; }
-  .rating-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .rating-btn { background: #1e293b; padding: 10px; border-radius: 24px; text-align: center; cursor: pointer; }
-  button { cursor: pointer; }
-</style>
+<!-- ملف التنسيقات -->
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div class="loading-bar" id="loading-bar"><div class="spinner"></div><div class="loading-text">جاري التحميل...</div></div>
+<!-- شاشة التحميل -->
+<div class="loading-bar" id="loading-bar">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">جاري تحميل الخريطة...</div>
+</div>
+
+<!-- الخريطة -->
 <div id="map"></div>
 
 <!-- شاشة الدخول -->
@@ -237,306 +37,298 @@
   <div class="login-box">
     <div class="login-icon">🎣</div>
     <div class="login-title">دليل الصياد</div>
-    <div class="login-sub">أدخل كودك الخاص للوصول</div>
-    <input class="login-input" id="login-input" type="text" placeholder="FISHER_01" maxlength="20" oninput="this.value=this.value.toUpperCase()">
-    <button class="login-btn" onclick="doLogin()">دخول</button>
-    <div class="login-error" id="login-error">❌ كود غير صحيح</div>
+    <div class="login-sub">أدخل كودك الخاص للوصول إلى الخريطة وإرسال تقاريرك</div>
+    <input class="login-input" id="login-input" type="text"
+           placeholder="FISHER_01" maxlength="20"
+           oninput="this.value=this.value.toUpperCase()"
+           onkeypress="if(event.key==='Enter') doLogin()">
+    <button class="login-btn" onclick="doLogin()">دخول &#8594;</button>
+    <div class="login-error" id="login-error">&#10060; كود غير صحيح — تواصل مع المشرف</div>
   </div>
 </div>
 
-<!-- شريط القياس والنجوم -->
+<!-- شريط أدوات القياس -->
 <div class="measurement-toolbar" id="measurement-toolbar" style="display:none;">
-  <button onclick="toggleDistanceMeasurement()">📏 مسافة</button>
-  <button onclick="toggleAreaMeasurement()">📐 مساحة</button>
-  <button onclick="clearMeasurements()">🗑️ مسح</button>
+  <button type="button" class="measurement-btn" id="measure-distance-btn" onclick="toggleDistanceMeasurement()">
+    📏 مسافة
+  </button>
+  <button type="button" class="measurement-btn" id="measure-area-btn" onclick="toggleAreaMeasurement()">
+    📐 مساحة
+  </button>
+  <button type="button" class="measurement-btn" id="clear-measurements-btn" onclick="clearMeasurements()">
+    🗑️ مسح
+  </button>
 </div>
-<div class="star-panel" id="star-panel" style="display:none;">
-  <div class="star-option" onclick="saveStarMarker('red')">🔴</div>
-  <div class="star-option" onclick="saveStarMarker('yellow')">⭐</div>
-  <div class="star-option" onclick="saveStarMarker('green')">🟢</div>
-  <div class="star-option" onclick="deleteAllStarMarkers()" style="font-size:24px;">🗑️ حذف الكل</div>
-</div>
 
-<button class="measurement-fab" id="measurement-fab" onclick="toggleMeasurementToolbar()">📏</button>
-<button class="star-fab" id="star-fab" onclick="toggleStarPanel()">⭐</button>
+<!-- زر القياس -->
+<button type="button" class="measurement-fab" id="measurement-fab" onclick="toggleMeasurementToolbar()">
+  📏
+</button>
 
-<!-- باقي النوافذ -->
-<div class="rating-panel" id="rating-panel">...</div>
-<div class="correction-panel" id="correction-panel">...</div>
-<div class="weather-panel" id="weather-panel">...</div>
-<div class="moon-panel" id="moon-panel">...</div>
-<div class="top-bar" id="top-bar" style="display:none;">...</div>
-<div class="info-panel" id="info-panel">...</div>
-<div class="legend" id="legend"></div>
+<!-- زر تصحيح -->
+<button type="button" class="correction-fab" id="correction-fab" onclick="openCorrection()" style="display:none;">
+  تصحيح
+</button>
 
-<script>
-  // ======================== تكوين الخريطة الأساسي ========================
-  let map;
-  let currentLayer = 'sst';
-  let gpsMarker = null;
-  let gpsWatchId = null;
-  let isLoggedIn = false;
-  let userCode = "";
-  
-  // متغيرات القياس
-  let measuringDistance = false, measuringArea = false;
-  let distancePoints = [], areaPoints = [];
-  let distancePolyline = null, areaPolygon = null;
-  
-  // ⭐ مصفوفة العلامات (النجوم) المحفوظة في localStorage
-  let starMarkers = []; // { id, lat, lng, color, userCode }
-  let starLayerGroup = L.layerGroup();
-  
-  // تحميل العلامات من localStorage
-  function loadStarMarkersFromStorage() {
-    const stored = localStorage.getItem('fishingStarMarkers');
-    if(stored) {
-      try {
-        starMarkers = JSON.parse(stored);
-      } catch(e) { starMarkers = []; }
-    } else {
-      starMarkers = [];
-    }
-    refreshStarMarkersOnMap();
-  }
-  
-  function saveStarMarkersToStorage() {
-    localStorage.setItem('fishingStarMarkers', JSON.stringify(starMarkers));
-  }
-  
-  // إضافة علامة نجمة جديدة في الموقع الحالي
-  function saveStarMarker(color) {
-    if(!isLoggedIn) { alert("الرجاء تسجيل الدخول أولاً"); return; }
-    if(!map) return;
-    const center = map.getCenter();
-    const newId = Date.now() + Math.random();
-    const newMarker = {
-      id: newId,
-      lat: center.lat,
-      lng: center.lng,
-      color: color,
-      userCode: userCode,
-      createdAt: new Date().toISOString()
-    };
-    starMarkers.push(newMarker);
-    saveStarMarkersToStorage();
-    addStarMarkerToMap(newMarker);
-    toggleStarPanel(); // إغلاق اللوحة بعد الحفظ
-    alert(`تم حفظ نجمة ${color === 'red' ? '🔴 حمراء' : (color === 'yellow' ? '⭐ صفراء' : '🟢 خضراء')} في هذا الموقع`);
-  }
-  
-  // إضافة علامة فردية على الخريطة
-  function addStarMarkerToMap(markerData) {
-    let starIconHtml = '';
-    if(markerData.color === 'red') starIconHtml = '🔴';
-    else if(markerData.color === 'yellow') starIconHtml = '⭐';
-    else starIconHtml = '🟢';
-    
-    const customIcon = L.divIcon({
-      html: `<div style="font-size:32px; filter: drop-shadow(0 0 4px black); cursor:pointer;" title="علامة ${markerData.userCode}">${starIconHtml}</div>`,
-      iconSize: [32,32],
-      className: 'star-marker-div'
-    });
-    const marker = L.marker([markerData.lat, markerData.lng], { icon: customIcon }).addTo(starLayerGroup);
-    marker.bindPopup(`
-      <b>⭐ علامة صياد</b><br>
-      المستخدم: ${markerData.userCode}<br>
-      النوع: ${markerData.color === 'red' ? '🔴 حمراء' : (markerData.color === 'yellow' ? '⭐ صفراء' : '🟢 خضراء')}<br>
-      <button onclick="deleteSingleStarMarker(${markerData.id})" style="background:#ef4444;border:none;padding:4px 12px;border-radius:20px;color:white;">🗑️ حذف هذه العلامة</button>
-    `, { maxWidth: 200 });
-    marker.on('popupopen', () => { });
-  }
-  
-  function refreshStarMarkersOnMap() {
-    starLayerGroup.clearLayers();
-    starMarkers.forEach(m => addStarMarkerToMap(m));
-  }
-  
-  function deleteSingleStarMarker(id) {
-    starMarkers = starMarkers.filter(m => m.id !== id);
-    saveStarMarkersToStorage();
-    refreshStarMarkersOnMap();
-    map.closePopup();
-  }
-  
-  function deleteAllStarMarkers() {
-    if(!confirm("هل أنت متأكد من حذف جميع العلامات النجمية؟")) return;
-    starMarkers = [];
-    saveStarMarkersToStorage();
-    refreshStarMarkersOnMap();
-    toggleStarPanel();
-    alert("تم حذف جميع العلامات");
-  }
-  
-  // واجهة النجوم
-  function toggleStarPanel() {
-    const panel = document.getElementById('star-panel');
-    if(panel.style.display === 'flex') panel.style.display = 'none';
-    else panel.style.display = 'flex';
-  }
-  
-  // القياس
-  function toggleMeasurementToolbar() {
-    const tb = document.getElementById('measurement-toolbar');
-    tb.style.display = tb.style.display === 'flex' ? 'none' : 'flex';
-  }
-  function toggleDistanceMeasurement() {
-    measuringDistance = true; measuringArea = false;
-    alert("انقر على الخريطة لبدء قياس المسافة (انتهاء بالضغط المزدوج)");
-    if(distancePolyline) map.removeLayer(distancePolyline);
-    distancePoints = [];
-    map.on('click', measureDistanceClick);
-  }
-  function measureDistanceClick(e) {
-    distancePoints.push([e.latlng.lat, e.latlng.lng]);
-    if(distancePolyline) map.removeLayer(distancePolyline);
-    distancePolyline = L.polyline(distancePoints, {color: 'cyan', weight: 4}).addTo(map);
-    if(distancePoints.length > 1) {
-      let totalDist = 0;
-      for(let i=1;i<distancePoints.length;i++) {
-        totalDist += map.distance(distancePoints[i-1], distancePoints[i]);
-      }
-      alert(`المسافة الحالية: ${(totalDist/1000).toFixed(2)} كم`);
-    }
-  }
-  function toggleAreaMeasurement() {
-    measuringArea = true; measuringDistance = false;
-    alert("انقر لرسم مساحة (انتهاء بالضغط المزدوج)");
-    areaPoints = [];
-    if(areaPolygon) map.removeLayer(areaPolygon);
-    map.on('click', measureAreaClick);
-  }
-  function measureAreaClick(e) {
-    areaPoints.push([e.latlng.lat, e.latlng.lng]);
-    if(areaPolygon) map.removeLayer(areaPolygon);
-    areaPolygon = L.polygon(areaPoints, {color: 'orange', weight: 3}).addTo(map);
-    if(areaPoints.length > 2) {
-      const area = L.GeometryUtil.geodesicArea(areaPoints);
-      alert(`المساحة التقريبية: ${(area/10000).toFixed(2)} هكتار`);
-    }
-  }
-  function clearMeasurements() {
-    if(distancePolyline) map.removeLayer(distancePolyline);
-    if(areaPolygon) map.removeLayer(areaPolygon);
-    distancePoints = []; areaPoints = [];
-    map.off('click');
-    measuringDistance = false; measuringArea = false;
-  }
-  
-  // GPS
-  function toggleGPS() {
-    if(!isLoggedIn) return;
-    if(gpsMarker) {
-      if(gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
-      map.removeLayer(gpsMarker);
-      gpsMarker = null;
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(pos => {
-      const {latitude, longitude} = pos.coords;
-      gpsMarker = L.marker([latitude, longitude], {icon: L.divIcon({html:'📍', iconSize:[24,24]})}).addTo(map);
-      map.setView([latitude, longitude], 13);
-      gpsWatchId = navigator.geolocation.watchPosition(p => {
-        if(gpsMarker) gpsMarker.setLatLng([p.coords.latitude, p.coords.longitude]);
-      });
-    }, err => alert("GPS غير متاح"));
-  }
-  
-  // محاكاة طبقات بسيطة (لإظهار الخريطة)
-  function initMap() {
-    map = L.map('map').setView([36.2, 0.3], 9);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-    }).addTo(map);
-    starLayerGroup.addTo(map);
-    loadStarMarkersFromStorage();
-    // أزرار وهمية للطبقات
-    document.getElementById('top-bar').style.display = 'block';
-    document.getElementById('info-panel').style.display = 'flex';
-  }
-  
-  // تسجيل الدخول
-  function doLogin() {
-    const code = document.getElementById('login-input').value.trim();
-    if(code === "" || code.length < 3) {
-      document.getElementById('login-error').style.display = 'block';
-      return;
-    }
-    userCode = code;
-    isLoggedIn = true;
-    document.getElementById('login-overlay').style.display = 'none';
-    document.getElementById('loading-bar').style.display = 'none';
-    initMap();
-    document.getElementById('correction-fab').style.display = 'flex';
-    document.getElementById('report-fab').style.display = 'flex';
-    document.getElementById('my-markers-btn').style.display = 'flex';
-  }
-  
-  // دوال وهمية للنوافذ الأخرى حتى لا تظهر اخطاء
-  window.openRating = () => alert("نافذة تقييم - يمكن إرسال تقارير الصيد");
-  window.closeRating = () => document.getElementById('rating-panel').style.display = 'none';
-  window.openCorrection = () => alert("نافذة تصحيح المخاطر");
-  window.closeCorrection = () => document.getElementById('correction-panel').style.display = 'none';
-  window.openWeather = () => alert("طقس: رياح معتدلة، ارتفاع الموج 1.2م");
-  window.closeWeather = () => document.getElementById('weather-panel').style.display = 'none';
-  window.openMoon = () => alert("مرحلة القمر: أحدب متزايد، إضاءة 78% مناسبة للصيد الليلي");
-  window.closeMoon = () => document.getElementById('moon-panel').style.display = 'none';
-  window.switchLayer = (layer) => { currentLayer = layer; alert(`تم التبديل إلى طبقة ${layer}`); };
-  window.toggleDangersDropdown = () => {};
-  window.toggleReports = () => alert("تقارير الصيادين - سيتم عرضها قريباً");
-  window.toggleMyMarkers = () => alert("معالمي الشخصية");
-  window.toggleBathyDepth = () => alert("طبقة أعماق البحر");
-  window.toggleBathyContour = () => alert("خطوط الكنتور");
-  window.toggleBathyWrecks = () => alert("حطام رسمي");
-  window.toggleRoutes = () => alert("المسارات البحرية");
-  window.toggleCurrent1 = () => alert("تيار السطح 1م");
-  window.toggleCurrent50 = () => alert("تيار العمق 50م");
-  window.setOpacity = (val) => {};
-  window.selectRating = () => {};
-  window.sendRating = () => alert("تم إرسال التقييم بنجاح");
-  window.sendCorrection = () => alert("تم إرسال التصحيح");
-  window.onObstacleTypeChange = () => {};
-  
-  // عرض شريط علوي سريع
-  document.getElementById('top-bar').innerHTML = `
-    <div style="display:flex; justify-content:space-between"><div class="brand"><span>🎣 خريطة الصياد</span></div><div><button class="hbtn" onclick="toggleGPS()">📍 GPS</button></div></div>
-    <div class="layer-tabs">
-      <div class="layer-tab active" onclick="switchLayer('sst')">🌡️ حرارة</div>
-      <div class="layer-tab" onclick="switchLayer('ssh')">💧 شفافية</div>
-      <div class="layer-tab" onclick="openWeather()">⛅ طقس</div>
-      <div class="layer-tab" onclick="openMoon()">🌙 قمر</div>
-      <div class="layer-tab" id="reports-btn" onclick="alert('تقارير')">🎣 التقارير</div>
+<!-- زر إرسال تقييم -->
+<button type="button" class="report-fab" id="report-fab" onclick="openRating()" style="display:none;align-items:center;justify-content:center;">
+  &#128203;
+</button>
+
+<!-- نافذة التقييم -->
+<div class="rating-panel" id="rating-panel">
+  <div class="rating-header">
+    <div class="rating-title">&#128203; تقييم موقع الصيد</div>
+    <div class="rating-coords" id="rating-coords">جاري تحديد موقعك...</div>
+  </div>
+  <div class="rating-grid">
+    <div class="rating-btn" onclick="selectRating(this,'صيد')">
+      <span class="rating-btn-icon">&#9989;</span>
+      <span class="rating-btn-label">صيد ناجح</span>
     </div>
-    <div class="opacity-wrap" style="margin-top:6px"><label>شفافية</label><input type="range" min="0.1" max="1" step="0.05" value="0.85" oninput="setOpacity(this.value)"></div>
-  `;
-  document.getElementById('info-panel').innerHTML = `
-    <div class="info-card"><div class="info-val" id="info-lat">--</div><div>خط العرض</div></div>
-    <div class="info-card"><div class="info-val" id="info-lon">--</div><div>خط الطول</div></div>
-    <div class="info-card"><div class="info-val" id="info-zoom">9</div><div>التكبير</div></div>
-  `;
-  if(map) {
-    map.on('mousemove', (e) => {
-      document.getElementById('info-lat').innerText = e.latlng.lat.toFixed(4);
-      document.getElementById('info-lon').innerText = e.latlng.lng.toFixed(4);
+    <div class="rating-btn" onclick="selectRating(this,'لا يوجد صيد')">
+      <span class="rating-btn-icon">&#10060;</span>
+      <span class="rating-btn-label">لا يوجد صيد</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'تجمع بدون اصطياد')">
+      <span class="rating-btn-icon">&#128993;</span>
+      <span class="rating-btn-label">تجمع بدون اصطياد</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'ملاحظة أسماك')">
+      <span class="rating-btn-icon">&#128065;</span>
+      <span class="rating-btn-label">ملاحظة أسماك</span>
+    </div>
+  </div>
+  <div class="boxes-wrap" id="boxes-wrap">
+    <div class="boxes-label">&#128230; عدد الصناديق:</div>
+    <input class="boxes-input" id="boxes-input" type="number" placeholder="—" inputmode="numeric">
+  </div>
+  <button class="send-btn" onclick="sendRating()">&#9989; إرسال التقييم</button>
+  <button class="cancel-btn" onclick="closeRating()">إلغاء</button>
+  <div class="send-status" id="send-status"></div>
+</div>
+
+<!-- نافذة التصحيح (مخاطر بحرية) -->
+<div class="correction-panel" id="correction-panel">
+  <div class="rating-header">
+    <div class="rating-title">&#128295; تصحيح — إبلاغ عن مُخاطر</div>
+    <div class="rating-coords" id="correction-coords">جاري تحديد موقعك...</div>
+  </div>
+  <div class="correction-options">
+    <label class="obstacle-label" for="obstacleType">نوع العائق</label>
+    <select id="obstacleType" name="obstacleType" class="obstacle-select" onchange="onObstacleTypeChange()">
+      <option value="" disabled selected>— اختر نوع العائق —</option>
+      <option value="نتوء صخري">نتوء صخري</option>
+      <option value="مخلفات صلبة">مخلفات صلبة</option>
+      <option value="كابلات">كابلات</option>
+      <option value="حطام سفينة">حطام سفينة</option>
+      <option value="أخرى">أخرى</option>
+    </select>
+  </div>
+  <div class="boxes-wrap" id="correction-other-wrap" style="display:none;">
+    <div class="boxes-label">تفاصيل إضافية (اختياري)</div>
+    <input class="boxes-input" id="correction-note" type="text" placeholder="وصف مختصر">
+  </div>
+  <button type="button" class="send-btn" onclick="sendCorrection()">&#9989; إرسال التصحيح</button>
+  <button type="button" class="cancel-btn" onclick="closeCorrection()">إلغاء</button>
+  <div class="send-status" id="correction-send-status"></div>
+</div>
+
+<!-- سلم الألوان -->
+<div class="legend" id="legend">
+  <div class="legend-title" id="legend-title">حرارة السطح °C</div>
+  <canvas class="legend-bar" id="legend-bar" width="200" height="14"></canvas>
+  <div class="legend-labels">
+    <span class="legend-label" id="legend-min">13</span>
+    <span class="legend-label" id="legend-max">28</span>
+  </div>
+</div>
+
+<!-- Tooltip الخريطة -->
+<div class="map-tooltip" id="map-tooltip"></div>
+
+<!-- الشريط العلوي -->
+<div class="top-bar">
+  <div class="top-bar-row1">
+    <div class="brand">
+      <div class="brand-icon">&#127907;</div>
+      <div>
+        <div class="brand-text">خريطة الصياد</div>
+        <div class="brand-sub" id="active-label">اختر طبقة</div>
+        <div class="date-badge" id="date-badge">جاري التحميل…</div>
+      </div>
+    </div>
+    <div class="header-btns">
+      <button class="hbtn" id="gps-btn" onclick="toggleGPS()">&#128205; GPS</button>
+      <button class="hbtn" onclick="map.setView([36.2,0.3],9)">&#127758; العودة</button>
+    </div>
+  </div>
+  <div class="layer-tabs">
+    <div class="layer-tab active" onclick="switchLayer('sst',this)">
+      <span class="layer-tab-icon">&#127777;</span>
+      <span class="layer-tab-label">حرارة</span>
+    </div>
+    <div class="layer-tab" id="ssh-btn" onclick="switchLayer('ssh',this)">
+      <span class="layer-tab-icon">&#11205;</span>
+      <span class="layer-tab-label">شفافية المياه</span>
+    </div>
+    <div class="layer-tab" onclick="toggleDangersDropdown(this)" id="dangers-tab">
+      <span class="layer-tab-icon">⚠️</span>
+      <span class="layer-tab-label">أخطار</span>
+    </div>
+    <div class="weather-fab" onclick="openWeather()">
+      <span class="weather-fab-icon">⛅</span>
+      <span class="weather-fab-label">أحوال الطقس</span>
+    </div>
+    <div class="layer-tab" onclick="openMoon()" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);">
+      <span class="layer-tab-icon">🌙</span>
+      <span class="layer-tab-label" style="color:#f59e0b;">القمر</span>
+    </div>
+    <div class="layer-tab" id="reports-btn" onclick="toggleReports(this)">
+      <span class="layer-tab-icon">🎣</span>
+      <span class="layer-tab-label">تقارير الصيادين</span>
+    </div>
+    <div class="layer-tab" id="my-markers-btn" onclick="toggleMyMarkers(this)"
+         style="display:none;background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.3);">
+      <span class="layer-tab-icon">📌</span>
+      <span class="layer-tab-label" style="color:#38bdf8;">معالمي</span>
+    </div>
+    <div class="layer-tab" id="bathy-depth-btn" onclick="toggleBathyDepth(this)">
+      <span class="layer-tab-icon">🗺️</span>
+      <span class="layer-tab-label">أعماق البحر</span>
+    </div>
+    <div class="layer-tab" id="bathy-contour-btn" onclick="toggleBathyContour(this)">
+      <span class="layer-tab-icon">📏</span>
+      <span class="layer-tab-label">خطوط الكنتور</span>
+    </div>
+    <div class="layer-tab" id="bathy-wrecks-btn" onclick="toggleBathyWrecks(this)">
+      <span class="layer-tab-icon">⚓</span>
+      <span class="layer-tab-label">حطام رسمي</span>
+    </div>
+  </div>
+
+  <!-- قائمة الأخطار المنسدلة -->
+  <div id="dangers-dropdown" style="display:none;margin-top:6px;background:rgba(6,13,24,0.95);border:1px solid var(--border);border-radius:12px;padding:8px;">
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-rocks" onchange="toggleDanger('rocks', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-rocks" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;"><span>🪨</span><span>مناطق صخرية</span></label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-wrecks" onchange="toggleDanger('wrecks', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-wrecks" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;"><span>⚓</span><span>حطام سفن</span></label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-cables" onchange="toggleDanger('cables', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-cables" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;"><span>📡</span><span>كابلات</span></label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-debris" onchange="toggleDanger('debris', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-debris" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;"><span>🗑️</span><span>مخلفات</span></label>
+    </div>
+  </div>
+
+  <!-- أزرار المسارات والتيارات -->
+  <div style="margin-top:6px;display:flex;gap:6px;">
+    <div class="layer-tab" id="route-btn" onclick="toggleRoutes(this)"
+         style="background:rgba(6,214,160,0.1);border-color:rgba(6,214,160,0.3);">
+      <span class="layer-tab-icon">&#128205;</span>
+      <span class="layer-tab-label" style="color:#06d6a0;">المسارات</span>
+    </div>
+    <div class="layer-tab" id="current1-btn" onclick="toggleCurrent1(this)"
+         style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);">
+      <span class="layer-tab-icon" style="color:#ef4444;">🌊</span>
+      <span class="layer-tab-label" style="color:#ef4444;">تيار السطح 1م</span>
+    </div>
+    <div class="layer-tab" id="current50-btn" onclick="toggleCurrent50(this)"
+         style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.3);">
+      <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
+      <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
+    </div>
+  </div>
+
+  <div class="opacity-wrap">
+    <label>شفافية</label>
+    <input type="range" id="opacity-slider" min="0.1" max="1" step="0.05" value="0.85"
+           oninput="setOpacity(this.value)">
+  </div>
+  <div class="data-banner" id="data-banner" role="alert"></div>
+</div>
+
+<!-- الشريط السفلي -->
+<div class="info-panel">
+  <div class="info-row">
+    <div class="info-card">
+      <div class="info-val" id="info-lat">--</div>
+      <div class="info-lbl">خط العرض</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-lon">--</div>
+      <div class="info-lbl">خط الطول</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-zoom">9</div>
+      <div class="info-lbl">التكبير</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-gps">--</div>
+      <div class="info-lbl">دقة GPS</div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة الطقس البحري -->
+<div class="weather-panel" id="weather-panel">
+  <div class="weather-header">
+    <div>
+      <div class="weather-title">⛅ أحوال الطقس البحري</div>
+      <div class="weather-sub">ميناء سيدي لخضر — 36.25°N / 0.30°E</div>
+    </div>
+    <button class="weather-close" onclick="closeWeather()">✕</button>
+  </div>
+  <div class="weather-body" id="weather-body">
+    <div class="weather-loading" id="weather-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">جاري تحميل بيانات الطقس...</div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة القمر -->
+<div class="moon-panel" id="moon-panel">
+  <div class="moon-header">
+    <div>
+      <div class="moon-title">🌙 مؤشر القمر للصيد</div>
+      <div class="moon-sub">إضاءة القمر تؤثر مباشرة على الصيد الليلي بالضوء</div>
+    </div>
+    <button class="moon-close" onclick="closeMoon()">✕</button>
+  </div>
+  <div class="moon-body" id="moon-body">
+    <!-- يُملأ بـ JS -->
+  </div>
+</div>
+
+<!-- ============================================================
+     ملفات JavaScript — بالترتيب مهم!
+     config.js أولاً لأن بقية الملفات تعتمد على متغيراته
+     ============================================================ -->
+<script src="js/config.js"></script>
+<script src="js/map.js"></script>
+<script src="js/layers.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/measurement.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/moon.js"></script>
+
+<!-- تسجيل Service Worker — PWA -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/fishing-map/sw.js')
+        .then(function(reg) { console.log('[PWA] ✅ Service Worker مسجل:', reg.scope); })
+        .catch(function(err) { console.warn('[PWA] ❌ فشل التسجيل:', err); });
     });
-    map.on('zoomend', () => document.getElementById('info-zoom').innerText = map.getZoom());
-  }
-  
-  window.toggleStarPanel = toggleStarPanel;
-  window.saveStarMarker = saveStarMarker;
-  window.deleteAllStarMarkers = deleteAllStarMarkers;
-  window.deleteSingleStarMarker = deleteSingleStarMarker;
-  window.toggleMeasurementToolbar = toggleMeasurementToolbar;
-  window.toggleDistanceMeasurement = toggleDistanceMeasurement;
-  window.toggleAreaMeasurement = toggleAreaMeasurement;
-  window.clearMeasurements = clearMeasurements;
-  window.toggleGPS = toggleGPS;
-  window.doLogin = doLogin;
-  
-  // جلب بعض المرافق
-  if(typeof L.GeometryUtil === 'undefined') {
-    L.GeometryUtil = { geodesicArea: (latlngs) => { return 100000; } };
   }
 </script>
+
 </body>
 </html>
