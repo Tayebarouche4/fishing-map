@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="خريطة الصيد">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
+<title>خريطة الصياد التفاعلية</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="loading-bar" id="loading-bar">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">جاري تحميل الخريطة...</div>
+</div>
+
+<div id="map"></div>
+
+<!-- شاشة الدخول -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-icon">🎣</div>
+    <div class="login-title">دليل الصياد</div>
+    <div class="login-sub">أدخل كودك الخاص للوصول إلى الخريطة وإرسال تقاريرك</div>
+    <input class="login-input" id="login-input" type="text"
+           placeholder="FISHER_01" maxlength="20"
+           oninput="this.value=this.value.toUpperCase()"
+           onkeypress="if(event.key==='Enter') doLogin()">
+    <button class="login-btn" onclick="doLogin()">دخول &#8594;</button>
+    <div class="login-error" id="login-error">&#10060; كود غير صحيح — تواصل مع المشرف</div>
+  </div>
+</div>
+
+<!-- شريط أدوات القياس -->
+<div class="measurement-toolbar" id="measurement-toolbar" style="display:none;">
+  <button type="button" class="measurement-btn" id="measure-distance-btn" onclick="toggleDistanceMeasurement()" title="قياس المسافة">
+    📏 مسافة
+  </button>
+  <button type="button" class="measurement-btn" id="measure-area-btn" onclick="toggleAreaMeasurement()" title="قياس المساحة">
+    📐 مساحة
+  </button>
+  <button type="button" class="measurement-btn" id="clear-measurements-btn" onclick="clearMeasurements()" title="مسح القياسات">
+    🗑️ مسح
+  </button>
+</div>
+
+<!-- زر القياس (فوق التصحيح) -->
+<button type="button" class="measurement-fab" id="measurement-fab" onclick="toggleMeasurementToolbar()" title="أدوات القياس">
+  📏
+</button>
+
+<!-- زر تصحيح (فوق التقييم) -->
+<button type="button" class="correction-fab" id="correction-fab" onclick="openCorrection()" style="display:none;" title="تصحيح — إبلاغ عن مخاطر">
+  تصحيح
+</button>
+
+<!-- زر إرسال تقييم -->
+<button type="button" class="report-fab" id="report-fab" onclick="openRating()" style="display:none;align-items:center;justify-content:center;">
+  &#128203;
+</button>
+
+<!-- نافذة التقييم -->
+<div class="rating-panel" id="rating-panel">
+  <div class="rating-header">
+    <div class="rating-title">&#128203; تقييم موقع الصيد</div>
+    <div class="rating-coords" id="rating-coords">جاري تحديد موقعك...</div>
+  </div>
+  <div class="rating-grid">
+    <div class="rating-btn" onclick="selectRating(this,'صيد')">
+      <span class="rating-btn-icon">&#9989;</span>
+      <span class="rating-btn-label">صيد ناجح</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'لا يوجد صيد')">
+      <span class="rating-btn-icon">&#10060;</span>
+      <span class="rating-btn-label">لا يوجد صيد</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'تجمع بدون اصطياد')">
+      <span class="rating-btn-icon">&#128993;</span>
+      <span class="rating-btn-label">تجمع بدون اصطياد</span>
+    </div>
+    <div class="rating-btn" onclick="selectRating(this,'ملاحظة أسماك')">
+      <span class="rating-btn-icon">&#128065;</span>
+      <span class="rating-btn-label">ملاحظة أسماك</span>
+    </div>
+  </div>
+  <div class="boxes-wrap" id="boxes-wrap">
+    <div class="boxes-label">&#128230; عدد الصناديق:</div>
+    <input class="boxes-input" id="boxes-input" type="number" placeholder="—" inputmode="numeric">
+  </div>
+  <button class="send-btn" onclick="sendRating()">&#9989; إرسال التقييم</button>
+  <button class="cancel-btn" onclick="closeRating()">إلغاء</button>
+  <div class="send-status" id="send-status"></div>
+</div>
+
+<!-- نافذة تصحيح (مخاطر بحرية) -->
+<div class="correction-panel" id="correction-panel">
+  <div class="rating-header">
+    <div class="rating-title">&#128295; تصحيح — إبلاغ عن مُخاطر</div>
+    <div class="rating-coords" id="correction-coords">جاري تحديد موقعك...</div>
+  </div>
+  <div class="correction-options">
+    <label class="obstacle-label" for="obstacleType">نوع العائق</label>
+    <select id="obstacleType" name="obstacleType" class="obstacle-select" onchange="onObstacleTypeChange()">
+      <option value="" disabled selected>— اختر نوع العائق —</option>
+      <option value="نتوء صخري">نتوء صخري</option>
+      <option value="مخلفات صلبة">مخلفات صلبة</option>
+      <option value="كابلات">كابلات</option>
+      <option value="حطام سفينة">حطام سفينة</option>
+      <option value="أخرى">أخرى</option>
+    </select>
+  </div>
+  <div class="boxes-wrap" id="correction-other-wrap" style="display:none;">
+    <div class="boxes-label">تفاصيل إضافية (اختياري)</div>
+    <input class="boxes-input" id="correction-note" type="text" placeholder="وصف مختصر">
+  </div>
+  <button type="button" class="send-btn" onclick="sendCorrection()">&#9989; إرسال التصحيح</button>
+  <button type="button" class="cancel-btn" onclick="closeCorrection()">إلغاء</button>
+  <div class="send-status" id="correction-send-status"></div>
+</div>
+
+<div class="legend" id="legend">
+  <div class="legend-title" id="legend-title">حرارة السطح °C</div>
+  <canvas class="legend-bar" id="legend-bar" width="200" height="14"></canvas>
+  <div class="legend-labels">
+    <span class="legend-label" id="legend-min">13</span>
+    <span class="legend-label" id="legend-max">28</span>
+  </div>
+</div>
+<div class="map-tooltip" id="map-tooltip"></div>
+
+<div class="top-bar">
+  <div class="top-bar-row1">
+    <div class="brand">
+      <div class="brand-icon">&#127907;</div>
+      <div>
+        <div class="brand-text">خريطة الصياد</div>
+        <div class="brand-sub" id="active-label">اختر طبقة</div>
+        <div class="date-badge" id="date-badge" title="تاريخ طبقة البيانات المعروضة">جاري التحميل…</div>
+      </div>
+    </div>
+    <div class="header-btns">
+      <button class="hbtn" id="gps-btn" onclick="toggleGPS()">&#128205; GPS</button>
+      <button class="hbtn" onclick="map.setView([36.2,0.3],9)">&#127758; العودة</button>
+    </div>
+  </div>
+  <div class="layer-tabs">
+    <div class="layer-tab active" onclick="switchLayer('sst',this)">
+      <span class="layer-tab-icon">&#127777;</span>
+      <span class="layer-tab-label">حرارة</span>
+    </div>
+    <div class="layer-tab" id="ssh-btn" onclick="switchLayer('ssh',this)">
+      <span class="layer-tab-icon">&#11205;</span>
+      <span class="layer-tab-label">شفافية المياه</span>
+    </div>
+    <div class="layer-tab" onclick="toggleDangersDropdown(this)" id="dangers-tab">
+      <span class="layer-tab-icon">⚠️</span>
+      <span class="layer-tab-label">أخطار</span>
+    </div>
+    <div class="weather-fab" onclick="openWeather()">
+      <span class="weather-fab-icon">⛅</span>
+      <span class="weather-fab-label">أحوال الطقس</span>
+    </div>
+    <div class="layer-tab" onclick="openMoon()" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);">
+      <span class="layer-tab-icon">🌙</span>
+      <span class="layer-tab-label" style="color:#f59e0b;">القمر</span>
+    </div>
+    <div class="layer-tab" id="reports-btn" onclick="toggleReports(this)">
+      <span class="layer-tab-icon">🎣</span>
+      <span class="layer-tab-label">تقارير الصيادين</span>
+    </div>
+    <div class="layer-tab" id="my-markers-btn" onclick="toggleMyMarkers(this)" style="display:none;background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.3);">
+      <span class="layer-tab-icon">📌</span>
+      <span class="layer-tab-label" style="color:#38bdf8;">معالمي</span>
+    </div>
+    <div class="layer-tab" id="bathy-depth-btn" onclick="toggleBathyDepth(this)">
+      <span class="layer-tab-icon">🗺️</span>
+      <span class="layer-tab-label">أعماق البحر</span>
+    </div>
+    <div class="layer-tab" id="bathy-contour-btn" onclick="toggleBathyContour(this)">
+      <span class="layer-tab-icon">📏</span>
+      <span class="layer-tab-label">خطوط الكنتور</span>
+    </div>
+    <div class="layer-tab" id="bathy-wrecks-btn" onclick="toggleBathyWrecks(this)">
+      <span class="layer-tab-icon">⚓</span>
+      <span class="layer-tab-label">حطام رسمي</span>
+    </div>
+  </div>
+  <!-- قائمة منسدلة للأخطار -->
+  <div id="dangers-dropdown" style="display:none;margin-top:6px;background:rgba(6,13,24,0.95);border:1px solid var(--border);border-radius:12px;padding:8px;">
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-rocks" onchange="toggleDanger('rocks', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-rocks" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>🪨</span>
+        <span>مناطق صخرية</span>
+      </label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-wrecks" onchange="toggleDanger('wrecks', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-wrecks" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>⚓</span>
+        <span>حطام سفن</span>
+      </label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-cables" onchange="toggleDanger('cables', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-cables" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>📡</span>
+        <span>كابلات</span>
+      </label>
+    </div>
+    <div class="danger-item" style="padding:8px 12px;cursor:pointer;border-radius:8px;color:var(--text);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="danger-debris" onchange="toggleDanger('debris', this.checked)" style="margin:0;cursor:pointer;">
+      <label for="danger-debris" style="margin:0;cursor:pointer;flex:1;display:flex;align-items:center;gap:8px;">
+        <span>🗑️</span>
+        <span>مخلفات</span>
+      </label>
+    </div>
+  </div>
+  <!-- زر المسارات منفصل -->
+  <div style="margin-top:6px;display:flex;gap:6px;">
+    <div class="layer-tab" id="route-btn" onclick="toggleRoutes(this)" style="background:rgba(6,214,160,0.1);border-color:rgba(6,214,160,0.3);">
+      <span class="layer-tab-icon">&#128205;</span>
+      <span class="layer-tab-label" style="color:#06d6a0;">المسارات</span>
+    </div>
+    <div class="layer-tab" id="current1-btn" onclick="toggleCurrent1(this)" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);">
+      <span class="layer-tab-icon" style="color:#ef4444;">🌊</span>
+      <span class="layer-tab-label" style="color:#ef4444;">تيار السطح 1م</span>
+    </div>
+    <div class="layer-tab" id="current50-btn" onclick="toggleCurrent50(this)" style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.3);">
+      <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
+      <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
+    </div>
+  </div>
+  <div class="opacity-wrap">
+    <label>شفافية</label>
+    <input type="range" id="opacity-slider" min="0.1" max="1" step="0.05" value="0.85"
+           oninput="setOpacity(this.value)">
+  </div>
+  <div class="data-banner" id="data-banner" role="alert"></div>
+</div>
+
+<div class="info-panel">
+  <div class="info-row">
+    <div class="info-card">
+      <div class="info-val" id="info-lat">--</div>
+      <div class="info-lbl">خط العرض</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-lon">--</div>
+      <div class="info-lbl">خط الطول</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-zoom">9</div>
+      <div class="info-lbl">التكبير</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="info-gps">--</div>
+      <div class="info-lbl">دقة GPS</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+
+<!-- ===== نافذة الطقس البحري ===== -->
+<div class="weather-panel" id="weather-panel">
+  <div class="weather-header">
+    <div>
+      <div class="weather-title">⛅ أحوال الطقس البحري</div>
+      <div class="weather-sub">ميناء سيدي لخضر — 36.25°N / 0.30°E</div>
+    </div>
+    <button class="weather-close" onclick="closeWeather()">✕</button>
+  </div>
+  <div class="weather-body" id="weather-body">
+    <div class="weather-loading" id="weather-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">جاري تحميل بيانات الطقس...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== نافذة القمر ===== -->
+<div class="moon-panel" id="moon-panel">
+  <div class="moon-header">
+    <div>
+      <div class="moon-title">🌙 مؤشر القمر للصيد</div>
+      <div class="moon-sub">إضاءة القمر تؤثر مباشرة على الصيد الليلي بالضوء</div>
+    </div>
+    <button class="moon-close" onclick="closeMoon()">✕</button>
+  </div>
+  <div class="moon-body" id="moon-body">
+    <!-- يُملأ بـ JS -->
+  </div>
+</div>
+
+
+
+<script src="js/app.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
