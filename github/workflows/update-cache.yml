@@ -1,0 +1,35 @@
+# .github/workflows/update-cache.yml
+# ============================================================
+# عند كل push على الفرع main، يُحقن تاريخ البناء تلقائياً
+# داخل sw.js — لا تحتاج تغيير أي شيء يدوياً
+# ============================================================
+
+name: Auto Update Cache Version
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  update-sw:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Inject build timestamp into sw.js
+        run: |
+          BUILD_TIME=$(date -u +"%Y%m%d-%H%M%S")
+          echo "Build version: $BUILD_TIME"
+          sed -i "s|self.__CACHE_VERSION__ || 'build-' + Date.now()|'build-$BUILD_TIME'|g" sw.js
+
+      - name: Commit updated sw.js
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sw.js
+          git diff --staged --quiet || git commit -m "🔄 auto: cache version $(date -u +%Y%m%d-%H%M%S)"
+          git push
