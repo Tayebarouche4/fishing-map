@@ -1,0 +1,25 @@
+name: Auto Update Version
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version.json
+        run: |
+          echo "{ \"v\": \"$(date -u +%Y-%m-%d-%H%M%S)\" }" > version.json
+
+      - name: Commit version.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git diff --staged --quiet || git commit -m "🔄 version $(date -u +%Y-%m-%d-%H%M%S)"
+          git push
