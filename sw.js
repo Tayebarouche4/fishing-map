@@ -6,7 +6,7 @@
  * ============================================================
  */
 
-const CACHE_VERSION = 'v4';   // ← غيّر هذا فقط عند كل تحديث
+const CACHE_VERSION = 'v5';   // ← غيّر هذا فقط عند كل تحديث
 const CACHE_NAME    = 'fishing-map-' + CACHE_VERSION;
 
 // الملفات التي تُحفظ للعمل Offline
