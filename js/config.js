@@ -4,7 +4,7 @@
 
 // إعدادات API السيرفر
 var API_BASE_URL = "https://fishing-map-api-production.up.railway.app";
-var API_KEY      = "fishing123";
+var API_KEY      = "change-this-secret-key";
 var SHEET_URL    = API_BASE_URL; // للتوافق مع الكود القديم
 
 // إعدادات الطقس والموقع
