@@ -55,6 +55,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .user-avatar {
   width: 38px; height: 38px;
@@ -63,10 +64,10 @@ h1 {
   display: flex; align-items: center; justify-content: center;
   font-size: 1.2rem;
 }
-.user-info { flex: 1; }
+.user-info { flex: 1; min-width: 150px; }
 .user-name { font-weight: 700; font-size: 0.9rem; }
 .user-meta { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
-.user-badges { display: flex; gap: 6px; }
+.user-badges { display: flex; gap: 6px; flex-wrap: wrap; }
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -162,6 +163,22 @@ h1 {
 .admin-btn:hover { background: rgba(255,255,255,0.1); }
 .admin-btn.primary { border-color: #d4af37; color: #d4af37; background: rgba(212,175,55,0.1); }
 
+/* شريط البحث */
+.search-box input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+.search-box input:focus {
+  outline: none;
+  border-color: #d4af37;
+}
+
 .loading { text-align: center; color: #64748b; padding: 40px; }
 .error   { text-align: center; color: #ef4444; padding: 20px; font-size: 0.85rem; }
 </style>
@@ -191,6 +208,11 @@ h1 {
 
 <div class="admin-actions">
   <button class="admin-btn primary" onclick="loadUsers()">🔄 تحديث</button>
+  <button class="admin-btn" onclick="exportPermissions()">📎 تصدير CSV</button>
+</div>
+
+<div class="search-box">
+  <input type="text" id="searchInput" placeholder="🔍 بحث باسم الصياد أو رقم الهاتف أو الكود...">
 </div>
 
 <div id="users-container">
@@ -203,7 +225,7 @@ var API_BASE = "https://fishing-map-api-production.up.railway.app";
 var API_KEY  = "change-this-secret-key";
 // ======================================================
 
-// الخدمات المتاحة للمنح
+// الخدمات المتاحة للمنح (مع إضافة حرارة السطح)
 var SERVICES = [
   { key: 'reports',      icon: '🎣', label: 'تقارير الصيادين' },
   { key: 'alerts',       icon: '⚠️', label: 'الأخطار' },
@@ -211,9 +233,20 @@ var SERVICES = [
   { key: 'depth',        icon: '🗺️', label: 'أعماق البحر' },
   { key: 'routes',       icon: '📍', label: 'المسارات' },
   { key: 'current_deep', icon: '🌊', label: 'تيار العمق 50م' },
+  { key: 'surface_temp', icon: '🌡️', label: 'حرارة السطح' }
 ];
 
 var allUsers = [];
+
+function showNotification(message, type) {
+  var notification = document.createElement('div');
+  notification.textContent = message;
+  notification.style.cssText = 'position:fixed;bottom:20px;right:20px;background:' + 
+    (type === 'success' ? '#22c55e' : '#ef4444') + 
+    ';color:white;padding:12px 20px;border-radius:8px;z-index:1000;animation:slideIn 0.3s ease;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:0.85rem;';
+  document.body.appendChild(notification);
+  setTimeout(function() { notification.remove(); }, 3000);
+}
 
 function loadUsers() {
   document.getElementById('users-container').innerHTML = '<div class="loading">جاري التحميل...</div>';
@@ -289,7 +322,7 @@ function renderUsers(users) {
 
     html += '</div>';
 
-    // زر حفظ + تفعيل/إيقاف
+    // أزرار الحفظ
     html += '<div style="display:flex;gap:8px;margin-top:10px;">';
     html += '<button class="save-btn" style="flex:2" onclick="event.stopPropagation();savePermissions(' + idx + ', \'' + u.code + '\')">💾 حفظ الصلاحيات</button>';
     if (u.active) {
@@ -305,6 +338,21 @@ function renderUsers(users) {
 
   html += '</div>';
   document.getElementById('users-container').innerHTML = html;
+  
+  // إضافة مستمع البحث
+  var searchInput = document.getElementById('searchInput');
+  if (searchInput && !searchInput.hasListener) {
+    searchInput.hasListener = true;
+    searchInput.addEventListener('input', function(e) {
+      var searchTerm = e.target.value.toLowerCase();
+      var filtered = allUsers.filter(function(u) {
+        return (u.name && u.name.toLowerCase().includes(searchTerm)) ||
+               (u.phone && u.phone.includes(searchTerm)) ||
+               (u.code && u.code.toLowerCase().includes(searchTerm));
+      });
+      renderUsers(filtered);
+    });
+  }
 }
 
 function toggleCard(idx) {
@@ -341,16 +389,19 @@ function savePermissions(idx, code) {
     if (data.status === 'success') {
       statusEl.style.color = '#22c55e';
       statusEl.textContent = '✅ تم الحفظ بنجاح';
+      showNotification('تم حفظ صلاحيات ' + code, 'success');
       setTimeout(function() { statusEl.textContent = ''; }, 3000);
       loadUsers();
     } else {
       statusEl.style.color = '#ef4444';
       statusEl.textContent = '❌ ' + (data.detail || 'فشل الحفظ');
+      showNotification(data.detail || 'فشل الحفظ', 'error');
     }
   })
   .catch(function() {
     statusEl.style.color = '#ef4444';
     statusEl.textContent = '❌ خطأ في الاتصال';
+    showNotification('خطأ في الاتصال', 'error');
   });
 }
 
@@ -361,9 +412,61 @@ function toggleActive(code, active) {
     body: JSON.stringify({ code: code, active: active })
   })
   .then(function(r) { return r.json(); })
-  .then(function() { loadUsers(); })
-  .catch(function() { alert('خطأ في الاتصال'); });
+  .then(function() { 
+    loadUsers();
+    showNotification('تم ' + (active ? 'تفعيل' : 'إيقاف') + ' المستخدم', 'success');
+  })
+  .catch(function() { 
+    showNotification('خطأ في الاتصال', 'error');
+  });
 }
+
+function exportPermissions() {
+  var exportData = allUsers.map(function(u) {
+    return {
+      name: u.name,
+      code: u.code,
+      phone: u.phone,
+      active: u.active,
+      level: u.level,
+      last_seen: u.last_seen,
+      permissions: u.permissions
+    };
+  });
+  
+  var headers = ['الاسم', 'الكود', 'الهاتف', 'نشط', 'المستوى', 'آخر ظهور'];
+  var csvRows = [headers];
+  
+  exportData.forEach(function(row) {
+    var values = [
+      row.name || '',
+      row.code,
+      row.phone || '',
+      row.active ? 'نشط' : 'موقوف',
+      row.level === 'advanced' ? 'متقدم' : 'عادي',
+      row.last_seen || ''
+    ];
+    csvRows.push(values.map(function(v) { return '"' + (v || '').replace(/"/g, '""') + '"'; }));
+  });
+  
+  var csvContent = csvRows.map(function(row) { return row.join(','); }).join('\n');
+  var blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+  var link = document.createElement('a');
+  var url = URL.createObjectURL(blob);
+  link.href = url;
+  link.setAttribute('download', 'users_export_' + new Date().toISOString().slice(0, 19) + '.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  showNotification('تم تصدير البيانات بنجاح', 'success');
+}
+
+// إضافة حركة ظهور للإشعارات
+var style = document.createElement('style');
+style.textContent = '@keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }';
+document.head.appendChild(style);
 
 loadUsers();
 </script>
