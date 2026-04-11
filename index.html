@@ -42,36 +42,6 @@
   display: inline-flex !important;
   flex-shrink: 0;
 }
-/* إصلاح مكان أيقونات التصحيح والتقارير */
-.correction-fab, .report-fab {
-  position: fixed;
-  left: 16px;
-  z-index: 1100;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.15);
-  background: rgba(15,23,42,0.92);
-  color: #e2e8f0;
-  font-size: 1.3rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
-  transition: transform .15s, background .15s;
-}
-.correction-fab:hover, .report-fab:hover {
-  transform: scale(1.07);
-  background: rgba(255,255,255,0.1);
-}
-.correction-fab {
-  bottom: 160px;
-}
-.report-fab {
-  bottom: 100px;
-}
 </style>
 </head>
 <body>
@@ -109,7 +79,7 @@
 </div>
 
 <button type="button" class="measurement-fab" id="measurement-fab" onclick="toggleMeasurementToolbar()">📏</button>
-<button type="button" class="correction-fab" id="correction-fab" onclick="openCorrection()" style="display:none;">🔧</button>
+<button type="button" class="correction-fab" id="correction-fab" onclick="openCorrection()" style="display:none;">تصحيح</button>
 <button type="button" class="report-fab" id="report-fab" onclick="openRating()" style="display:none;align-items:center;justify-content:center;">📃</button>
 
 <div class="rating-panel" id="rating-panel">
@@ -203,7 +173,7 @@
     <div class="danger-item"><input type="checkbox" id="danger-debris" onchange="toggleDanger('debris', this.checked)"><label for="danger-debris">🗑️ مخلفات</label></div>
   </div>
 
-  <!-- السطر الثاني القابل للتمرير مع زر SOS -->
+  <!-- السطر الثاني القابل للتمرير -->
   <div class="scrollable-row" style="margin-top:6px;">
     <div class="layer-tab" id="route-btn" onclick="toggleRoutes(this)" style="background:rgba(6,214,160,0.1);border-color:rgba(6,214,160,0.3);">
       <span class="layer-tab-icon">📍</span>
@@ -217,7 +187,7 @@
       <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
       <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
     </div>
-    <!-- زر الطوارئ SOS -->
+    <!-- زر الطوارئ SOS - تم تغيير onclick ليعمل -->
     <div class="layer-tab" id="sos-tab" onclick="showSOSConfirm()" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
       <span class="layer-tab-icon">🚨</span>
       <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
