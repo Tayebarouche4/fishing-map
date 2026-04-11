@@ -573,9 +573,6 @@ function sendSOS() {
     return;
   }
   
-  var btn = document.getElementById('sos-tab');
-  btn.style.opacity = '0.5';
-  
   navigator.geolocation.getCurrentPosition(function(position) {
     var lat = position.coords.latitude;
     var lon = position.coords.longitude;
@@ -600,16 +597,13 @@ function sendSOS() {
       } else {
         alert("❌ فشل الإرسال: " + (data.detail || "خطأ غير معروف"));
       }
-      btn.style.opacity = '1';
     })
     .catch(function() {
       alert("❌ خطأ في الاتصال بالخادم");
-      btn.style.opacity = '1';
     });
     
   }, function(error) {
     alert("❌ لا يمكن تحديد موقعك. تأكد من تشغيل GPS.");
-    btn.style.opacity = '1';
   });
 }
 
