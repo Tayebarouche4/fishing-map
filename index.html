@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="خريطة الصيد">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS ونظام طوارئ.">
 <title>خريطة الصياد التفاعلية</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -41,6 +41,17 @@
 .layer-tab {
   display: inline-flex !important;
   flex-shrink: 0;
+}
+/* تعديل مكان زر النجمة */
+.star-fab {
+  position:fixed; left:16px; bottom:320px; z-index:1100;
+  width:52px; height:52px; border-radius:50%;
+  border:2px solid rgba(251,191,36,0.45);
+  background:linear-gradient(135deg,#92400e,#78350f);
+  color:#fde68a; font-size:1.3rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 16px rgba(0,0,0,0.45);
+  transition:background .2s, box-shadow .2s, transform .15s;
 }
 </style>
 </head>
@@ -173,7 +184,7 @@
     <div class="danger-item"><input type="checkbox" id="danger-debris" onchange="toggleDanger('debris', this.checked)"><label for="danger-debris">🗑️ مخلفات</label></div>
   </div>
 
-  <!-- السطر الثاني القابل للتمرير -->
+  <!-- السطر الثاني القابل للتمرير مع زر SOS -->
   <div class="scrollable-row" style="margin-top:6px;">
     <div class="layer-tab" id="route-btn" onclick="toggleRoutes(this)" style="background:rgba(6,214,160,0.1);border-color:rgba(6,214,160,0.3);">
       <span class="layer-tab-icon">📍</span>
@@ -187,7 +198,8 @@
       <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
       <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
     </div>
-    <div class="layer-tab" id="sos-tab" onclick="alert('سيتم إرسال نداء الاستغاثة قريباً')" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
+    <!-- زر الطوارئ SOS - يعمل حقيقياً -->
+    <div class="layer-tab" id="sos-tab" onclick="showSOSConfirm()" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
       <span class="layer-tab-icon">🚨</span>
       <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
     </div>
@@ -233,76 +245,8 @@
 <script src="js/weather.js"></script>
 <script src="js/moon.js"></script>
 
-<style>
-.star-fab {
-  position:fixed; left:16px; bottom:268px; z-index:1100;
-  width:52px; height:52px; border-radius:50%;
-  border:2px solid rgba(251,191,36,0.45);
-  background:linear-gradient(135deg,#92400e,#78350f);
-  color:#fde68a; font-size:1.3rem; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 4px 16px rgba(0,0,0,0.45);
-  transition:background .2s, box-shadow .2s, transform .15s;
-}
-.star-fab:hover { transform:scale(1.07); }
-.star-fab.menu-open {
-  background:linear-gradient(135deg,#b45309,#92400e);
-  box-shadow:0 0 0 3px rgba(251,191,36,0.4), 0 4px 16px rgba(0,0,0,0.45);
-}
-.star-fab.mode-active {
-  box-shadow:0 0 0 3px var(--star-active-color,#eab308), 0 4px 16px rgba(0,0,0,0.45);
-  animation:starPulse 1.4s infinite;
-}
-@keyframes starPulse {
-  0%,100% { box-shadow:0 0 0 3px var(--star-active-color,#eab308), 0 4px 16px rgba(0,0,0,.45); }
-  50%      { box-shadow:0 0 0 7px rgba(234,179,8,0), 0 4px 16px rgba(0,0,0,.45); }
-}
-.star-menu {
-  position:fixed; left:16px; bottom:328px; z-index:1101;
-  display:none; flex-direction:column; gap:8px; align-items:center;
-}
-.star-menu.open { display:flex; }
-.star-color-btn {
-  width:44px; height:44px; border-radius:50%;
-  border:1px solid rgba(255,255,255,0.15);
-  background:rgba(15,23,42,0.92); font-size:1.2rem; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(8px); box-shadow:0 2px 8px rgba(0,0,0,0.45);
-  transition:transform .15s, background .15s;
-}
-.star-color-btn:hover { transform:scale(1.18); background:rgba(255,255,255,0.1); }
-.star-marker-icon {
-  font-size:26px; line-height:1;
-  text-shadow:0 0 6px rgba(0,0,0,0.8);
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
-  cursor:pointer; transition:transform .15s; user-select:none;
-}
-.star-marker-icon:hover { transform:scale(1.2); }
-.star-popup-wrapper .leaflet-popup-content-wrapper {
-  background:rgba(6,13,24,0.96); border:1px solid rgba(255,255,255,0.12);
-  border-radius:12px; color:#e2e8f0; font-family:'Tajawal',sans-serif;
-}
-.star-popup-wrapper .leaflet-popup-tip { background:rgba(6,13,24,0.96); }
-.star-popup { padding:4px 2px; text-align:center; direction:rtl; }
-.star-popup-title  { font-size:.9rem; font-weight:700; margin-bottom:4px; }
-.star-popup-coords { font-size:.7rem; color:#94a3b8; margin-bottom:10px; direction:ltr; }
-.star-popup-delete {
-  background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
-  color:#fca5a5; border-radius:8px; padding:5px 14px;
-  font-size:.78rem; font-family:'Tajawal',sans-serif;
-  cursor:pointer; transition:background .2s; width:100%;
-}
-.star-popup-delete:hover { background:rgba(239,68,68,0.35); }
-.star-hint {
-  position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
-  background:rgba(6,13,24,0.93); border:1px solid rgba(251,191,36,0.45);
-  color:#fde68a; font-family:'Tajawal',sans-serif;
-  font-size:.82rem; padding:8px 20px; border-radius:20px;
-  z-index:1300; pointer-events:none; white-space:nowrap;
-  box-shadow:0 4px 16px rgba(0,0,0,0.5); display:none;
-}
-</style>
 <script>
+// نظام معالم النجوم
 (function () {
   var STAR_COLORS = {
     red:    { emoji: '🔴', label: 'نقطة مهمة', hex: '#ef4444' },
@@ -418,6 +362,123 @@
 
   initStars();
 })();
+</script>
+
+<script>
+// ============================================================
+// نظام الطوارئ SOS - يعمل حقيقياً
+// ============================================================
+var API_BASE_SOS = "https://fishing-xbds.onrender.com";
+var API_KEY_SOS = "fishing123";
+var currentUserCodeSOS = null;
+
+function showSOSConfirm() {
+  if (!currentUserCodeSOS) {
+    alert("⚠️ الرجاء تسجيل الدخول أولاً");
+    return;
+  }
+  
+  if (confirm("🚨 هل أنت في خطر حقيقي؟\n\nسيتم إرسال موقعك لجميع الصيادين القريبين.\n\n⚠️ استخدم هذا الزر فقط في حالات الطوارئ الحقيقية")) {
+    sendSOS();
+  }
+}
+
+function sendSOS() {
+  if (!navigator.geolocation) {
+    alert("❌ المتصفح لا يدعم تحديد الموقع");
+    return;
+  }
+  
+  var btn = document.getElementById('sos-tab');
+  btn.style.opacity = '0.5';
+  
+  navigator.geolocation.getCurrentPosition(function(position) {
+    var lat = position.coords.latitude;
+    var lon = position.coords.longitude;
+    
+    fetch(API_BASE_SOS + '/api/sos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY_SOS
+      },
+      body: JSON.stringify({
+        code: currentUserCodeSOS,
+        lat: lat,
+        lon: lon,
+        note: "نداء استغاثة"
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.status === 'success') {
+        alert("✅ تم إرسال نداء الاستغاثة!\n\nسيتم إعلام المستجيبين بموقعك.");
+      } else {
+        alert("❌ فشل الإرسال: " + (data.detail || "خطأ غير معروف"));
+      }
+      btn.style.opacity = '1';
+    })
+    .catch(function() {
+      alert("❌ خطأ في الاتصال بالخادم");
+      btn.style.opacity = '1';
+    });
+    
+  }, function(error) {
+    var msg = "";
+    switch(error.code) {
+      case error.PERMISSION_DENIED:
+        msg = "الرجاء السماح بتحديد الموقع";
+        break;
+      case error.POSITION_UNAVAILABLE:
+        msg = "معلومات الموقع غير متوفرة";
+        break;
+      case error.TIMEOUT:
+        msg = "انتهى وقت محاولة تحديد الموقع";
+        break;
+      default:
+        msg = "حدث خطأ في تحديد الموقع";
+    }
+    alert("❌ " + msg);
+    btn.style.opacity = '1';
+  });
+}
+
+// دالة تسجيل الدخول
+window.doLogin = function() {
+  var code = document.getElementById('login-input').value.trim().toUpperCase();
+  if (!code) return;
+  
+  fetch(API_BASE_SOS + '/api/login/' + code, {
+    headers: { 'x-api-key': API_KEY_SOS }
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error('خطأ في الدخول');
+    return r.json();
+  })
+  .then(function(data) {
+    if (data.status === 'success') {
+      currentUserCodeSOS = data.code;
+      localStorage.setItem('fisherman_code', currentUserCodeSOS);
+      document.getElementById('login-overlay').style.display = 'none';
+      if (typeof initMap === 'function') initMap();
+    }
+  })
+  .catch(function(err) {
+    document.getElementById('login-error').style.display = 'block';
+  });
+};
+
+function checkSavedSession() {
+  var savedCode = localStorage.getItem('fisherman_code');
+  if (savedCode) {
+    document.getElementById('login-input').value = savedCode;
+    window.doLogin();
+  }
+}
+
+window.addEventListener('load', function() {
+  checkSavedSession();
+});
 </script>
 
 <button id="update-fab" onclick="doAppUpdate()" style="display:none; position:fixed; bottom:272px; right:14px; z-index:2000; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#06d6a0,#00a87a); border:2px solid rgba(255,255,255,0.3); cursor:pointer; font-size:1.4rem; align-items:center; justify-content:center; animation:updatePulse 1.8s infinite;" title="تحديث جديد — اضغط للتحديث">🔄</button>
