@@ -267,7 +267,7 @@
     </div>
     <!-- زر الطوارئ SOS -->
     <div class="layer-tab" id="sos-tab" onclick="showSOSConfirm()"
-         style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);cursor:pointer;">
+         style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
       <span class="layer-tab-icon">🚨</span>
       <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
     </div>
@@ -331,6 +331,19 @@
   </div>
   <div class="moon-body" id="moon-body">
     <!-- يُملأ بـ JS -->
+  </div>
+</div>
+
+<!-- نافذة تأكيد SOS المخصصة (جميلة ومنسقة) -->
+<div id="sosConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:20000; justify-content:center; align-items:center;">
+  <div style="background:#0a0f1e; border:2px solid #ef4444; border-radius:24px; padding:30px; width:90%; max-width:360px; text-align:center;">
+    <div style="font-size:4rem; margin-bottom:10px;">🚨</div>
+    <h2 style="color:#ef4444; font-size:1.6rem; margin-bottom:15px;">هل أنت في خطر حقيقي؟</h2>
+    <p style="color:#e2e8f0; margin-bottom:25px; line-height:1.6;">سيتم إرسال موقعك لجميع الصيادين القريبين.<br><span style="color:#f59e0b;">⚠️ استخدم هذا الزر فقط في حالات الطوارئ الحقيقية</span></p>
+    <div style="display:flex; gap:12px;">
+      <button onclick="closeSOSConfirm()" style="flex:1; padding:14px; background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:white; font-size:1rem; cursor:pointer;">إلغاء</button>
+      <button onclick="sendSOS()" style="flex:1; padding:14px; background:#ef4444; border:none; border-radius:12px; color:white; font-size:1rem; font-weight:bold; cursor:pointer;">نعم، أرسل</button>
+    </div>
   </div>
 </div>
 
@@ -545,17 +558,23 @@ function showSOSConfirm() {
     alert("⚠️ الرجاء تسجيل الدخول أولاً");
     return;
   }
-  
-  if (confirm("🚨 هل أنت في خطر حقيقي؟\n\nسيتم إرسال موقعك لجميع الصيادين القريبين.\n\n⚠️ استخدم هذا الزر فقط في حالات الطوارئ الحقيقية")) {
-    sendSOS();
-  }
+  document.getElementById('sosConfirmModal').style.display = 'flex';
+}
+
+function closeSOSConfirm() {
+  document.getElementById('sosConfirmModal').style.display = 'none';
 }
 
 function sendSOS() {
+  closeSOSConfirm();
+  
   if (!navigator.geolocation) {
     alert("❌ المتصفح لا يدعم تحديد الموقع");
     return;
   }
+  
+  var btn = document.getElementById('sos-tab');
+  btn.style.opacity = '0.5';
   
   navigator.geolocation.getCurrentPosition(function(position) {
     var lat = position.coords.latitude;
@@ -581,18 +600,20 @@ function sendSOS() {
       } else {
         alert("❌ فشل الإرسال: " + (data.detail || "خطأ غير معروف"));
       }
+      btn.style.opacity = '1';
     })
     .catch(function() {
       alert("❌ خطأ في الاتصال بالخادم");
+      btn.style.opacity = '1';
     });
     
   }, function(error) {
     alert("❌ لا يمكن تحديد موقعك. تأكد من تشغيل GPS.");
+    btn.style.opacity = '1';
   });
 }
 
 // تعديل دالة doLogin لتخزين الكود
-var originalDoLogin = window.doLogin;
 window.doLogin = function() {
   var code = document.getElementById('login-input').value.trim().toUpperCase();
   if (!code) return;
