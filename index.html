@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="خريطة الصيد">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS ونظام طوارئ.">
 <title>خريطة الصياد التفاعلية</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -187,7 +187,8 @@
       <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
       <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
     </div>
-    <div class="layer-tab" id="sos-tab" onclick="alert('سيتم إرسال نداء الاستغاثة قريباً')" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
+    <!-- زر الطوارئ SOS - يعمل -->
+    <div class="layer-tab" id="sos-tab" onclick="showSOSConfirm()" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
       <span class="layer-tab-icon">🚨</span>
       <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
     </div>
@@ -418,6 +419,69 @@
 
   initStars();
 })();
+</script>
+
+<!-- ===== نظام الطوارئ SOS ===== -->
+<script>
+var API_BASE_SOS = "https://fishing-xbds.onrender.com";
+var API_KEY_SOS = "fishing123";
+var currentUserCodeSOS = null;
+
+function showSOSConfirm() {
+  if (!currentUserCodeSOS) {
+    alert("⚠️ الرجاء تسجيل الدخول أولاً");
+    return;
+  }
+  if (confirm("🚨 هل أنت في خطر حقيقي؟\n\nسيتم إرسال موقعك لجميع الصيادين القريبين.")) {
+    sendSOS();
+  }
+}
+
+function sendSOS() {
+  if (!navigator.geolocation) {
+    alert("❌ المتصفح لا يدعم تحديد الموقع");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(function(position) {
+    fetch(API_BASE_SOS + '/api/sos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY_SOS },
+      body: JSON.stringify({ code: currentUserCodeSOS, lat: position.coords.latitude, lon: position.coords.longitude, note: "نداء استغاثة" })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      alert(data.status === 'success' ? "✅ تم إرسال نداء الاستغاثة!" : "❌ فشل الإرسال");
+    })
+    .catch(function() { alert("❌ خطأ في الاتصال"); });
+  }, function() { alert("❌ لا يمكن تحديد موقعك"); });
+}
+
+window.doLogin = function() {
+  var code = document.getElementById('login-input').value.trim().toUpperCase();
+  if (!code) return;
+  fetch(API_BASE_SOS + '/api/login/' + code, { headers: { 'x-api-key': API_KEY_SOS } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.status === 'success') {
+        currentUserCodeSOS = data.code;
+        localStorage.setItem('fisherman_code', currentUserCodeSOS);
+        document.getElementById('login-overlay').style.display = 'none';
+        // إظهار أزرار التصحيح والتقارير
+        var correctionBtn = document.getElementById('correction-fab');
+        var reportBtn = document.getElementById('report-fab');
+        if (correctionBtn) correctionBtn.style.display = 'flex';
+        if (reportBtn) reportBtn.style.display = 'flex';
+        if (typeof initMap === 'function') initMap();
+      }
+    })
+    .catch(function() { document.getElementById('login-error').style.display = 'block'; });
+};
+
+function checkSavedSession() {
+  var savedCode = localStorage.getItem('fisherman_code');
+  if (savedCode) { document.getElementById('login-input').value = savedCode; window.doLogin(); }
+}
+window.addEventListener('load', checkSavedSession);
 </script>
 
 <button id="update-fab" onclick="doAppUpdate()" style="display:none; position:fixed; bottom:272px; right:14px; z-index:2000; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#06d6a0,#00a87a); border:2px solid rgba(255,255,255,0.3); cursor:pointer; font-size:1.4rem; align-items:center; justify-content:center; animation:updatePulse 1.8s infinite;" title="تحديث جديد — اضغط للتحديث">🔄</button>
