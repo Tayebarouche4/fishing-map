@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="خريطة الصيد">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS ونظام طوارئ.">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
 <title>خريطة الصياد التفاعلية</title>
 
 <!-- مكتبات خارجية -->
@@ -266,7 +266,7 @@
       <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
     </div>
     <!-- زر الطوارئ SOS -->
-    <div class="layer-tab" id="sos-tab" onclick="showSOSConfirm()"
+    <div class="layer-tab" id="sos-tab" onclick="alert('سيتم إرسال نداء الاستغاثة قريباً')"
          style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
       <span class="layer-tab-icon">🚨</span>
       <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
@@ -331,19 +331,6 @@
   </div>
   <div class="moon-body" id="moon-body">
     <!-- يُملأ بـ JS -->
-  </div>
-</div>
-
-<!-- نافذة تأكيد SOS المخصصة (جميلة ومنسقة) -->
-<div id="sosConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:20000; justify-content:center; align-items:center;">
-  <div style="background:#0a0f1e; border:2px solid #ef4444; border-radius:24px; padding:30px; width:90%; max-width:360px; text-align:center;">
-    <div style="font-size:4rem; margin-bottom:10px;">🚨</div>
-    <h2 style="color:#ef4444; font-size:1.6rem; margin-bottom:15px;">هل أنت في خطر حقيقي؟</h2>
-    <p style="color:#e2e8f0; margin-bottom:25px; line-height:1.6;">سيتم إرسال موقعك لجميع الصيادين القريبين.<br><span style="color:#f59e0b;">⚠️ استخدم هذا الزر فقط في حالات الطوارئ الحقيقية</span></p>
-    <div style="display:flex; gap:12px;">
-      <button onclick="closeSOSConfirm()" style="flex:1; padding:14px; background:rgba(255,255,255,0.1); border:none; border-radius:12px; color:white; font-size:1rem; cursor:pointer;">إلغاء</button>
-      <button onclick="sendSOS()" style="flex:1; padding:14px; background:#ef4444; border:none; border-radius:12px; color:white; font-size:1rem; font-weight:bold; cursor:pointer;">نعم، أرسل</button>
-    </div>
   </div>
 </div>
 
@@ -547,104 +534,6 @@
 })();
 </script>
 
-<!-- ===== نظام الطوارئ SOS ===== -->
-<script>
-var API_BASE_SOS = "https://fishing-xbds.onrender.com";
-var API_KEY_SOS = "fishing123";
-var currentUserCodeSOS = null;
-
-function showSOSConfirm() {
-  if (!currentUserCodeSOS) {
-    alert("⚠️ الرجاء تسجيل الدخول أولاً");
-    return;
-  }
-  document.getElementById('sosConfirmModal').style.display = 'flex';
-}
-
-function closeSOSConfirm() {
-  document.getElementById('sosConfirmModal').style.display = 'none';
-}
-
-function sendSOS() {
-  closeSOSConfirm();
-  
-  if (!navigator.geolocation) {
-    alert("❌ المتصفح لا يدعم تحديد الموقع");
-    return;
-  }
-  
-  navigator.geolocation.getCurrentPosition(function(position) {
-    var lat = position.coords.latitude;
-    var lon = position.coords.longitude;
-    
-    fetch(API_BASE_SOS + '/api/sos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY_SOS
-      },
-      body: JSON.stringify({
-        code: currentUserCodeSOS,
-        lat: lat,
-        lon: lon,
-        note: "نداء استغاثة"
-      })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.status === 'success') {
-        alert("✅ تم إرسال نداء الاستغاثة!\n\nسيتم إعلام المستجيبين بموقعك.");
-      } else {
-        alert("❌ فشل الإرسال: " + (data.detail || "خطأ غير معروف"));
-      }
-    })
-    .catch(function() {
-      alert("❌ خطأ في الاتصال بالخادم");
-    });
-    
-  }, function(error) {
-    alert("❌ لا يمكن تحديد موقعك. تأكد من تشغيل GPS.");
-  });
-}
-
-// تعديل دالة doLogin لتخزين الكود
-window.doLogin = function() {
-  var code = document.getElementById('login-input').value.trim().toUpperCase();
-  if (!code) return;
-  
-  fetch(API_BASE_SOS + '/api/login/' + code, {
-    headers: { 'x-api-key': API_KEY_SOS }
-  })
-  .then(function(r) {
-    if (!r.ok) throw new Error('خطأ في الدخول');
-    return r.json();
-  })
-  .then(function(data) {
-    if (data.status === 'success') {
-      currentUserCodeSOS = data.code;
-      localStorage.setItem('fisherman_code', currentUserCodeSOS);
-      document.getElementById('login-overlay').style.display = 'none';
-      if (typeof initMap === 'function') initMap();
-    }
-  })
-  .catch(function(err) {
-    document.getElementById('login-error').style.display = 'block';
-  });
-};
-
-function checkSavedSession() {
-  var savedCode = localStorage.getItem('fisherman_code');
-  if (savedCode) {
-    document.getElementById('login-input').value = savedCode;
-    window.doLogin();
-  }
-}
-
-window.addEventListener('load', function() {
-  checkSavedSession();
-});
-</script>
-
 <!-- زر التحديث العائم — مخفي، يظهر فقط عند وجود تحديث -->
 <button id="update-fab" onclick="doAppUpdate()" style="
   display:none; position:fixed; bottom:272px; right:14px; z-index:2000;
@@ -694,6 +583,7 @@ if ('serviceWorker' in navigator) {
   window.doAppUpdate = function() {
     var btn = document.getElementById('update-fab');
     if (btn._newV) localStorage.setItem(STORAGE_KEY, btn._newV);
+    // أعد التحميل مع تجاوز الكاش
     window.location.reload(true);
   };
 
@@ -712,9 +602,10 @@ if ('serviceWorker' in navigator) {
           showUpdateFab(newV);
         }
       })
-      .catch(function() {});
+      .catch(function() { /* لا إنترنت — تجاهل */ });
   }
 
+  // تحقق بعد 2 ثانية من الفتح، ثم كل 5 دقائق
   window.addEventListener('load', function() {
     setTimeout(checkVersion, 2000);
     setInterval(checkVersion, 5 * 60 * 1000);
