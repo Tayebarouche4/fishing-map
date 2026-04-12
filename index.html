@@ -20,34 +20,6 @@
 
 <!-- ملف التنسيقات -->
 <link rel="stylesheet" href="css/style.css">
-<style>
-/* جعل السطر الثاني قابل للتمرير */
-.scrollable-row {
-  overflow-x: auto;
-  white-space: nowrap;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-}
-.scrollable-row::-webkit-scrollbar {
-  height: 4px;
-}
-.scrollable-row::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.05);
-  border-radius: 4px;
-}
-.scrollable-row::-webkit-scrollbar-thumb {
-  background: #d4af37;
-  border-radius: 4px;
-}
-.layer-tab {
-  display: inline-flex !important;
-  flex-shrink: 0;
-}
-</style>
 </head>
 <body>
 
@@ -276,11 +248,11 @@
     </div>
   </div>
 
-  <!-- أزرار المسارات والتيارات + زر SOS (قابل للتمرير) -->
-  <div class="scrollable-row" style="margin-top:6px;">
+  <!-- أزرار المسارات والتيارات -->
+  <div style="margin-top:6px;display:flex;gap:6px;">
     <div class="layer-tab" id="route-btn" onclick="toggleRoutes(this)"
          style="background:rgba(6,214,160,0.1);border-color:rgba(6,214,160,0.3);">
-      <span class="layer-tab-icon">📍</span>
+      <span class="layer-tab-icon">&#128205;</span>
       <span class="layer-tab-label" style="color:#06d6a0;">المسارات</span>
     </div>
     <div class="layer-tab" id="current1-btn" onclick="toggleCurrent1(this)"
@@ -292,12 +264,6 @@
          style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.3);">
       <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
       <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
-    </div>
-    <!-- زر الطوارئ SOS -->
-    <div class="layer-tab" id="sos-tab" onclick="sendSOS()"
-         style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
-      <span class="layer-tab-icon">🚨</span>
-      <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
     </div>
   </div>
 
@@ -560,87 +526,6 @@
 
   initStars();
 })();
-</script>
-
-<!-- ===== نظام الطوارئ SOS ===== -->
-<script>
-function sendSOS() {
-  var code = localStorage.getItem('fisherman_code');
-  if (!code) {
-    alert("⚠️ الرجاء تسجيل الدخول أولاً");
-    return;
-  }
-  if (!navigator.geolocation) {
-    alert("❌ المتصفح لا يدعم تحديد الموقع");
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(function(position) {
-    fetch('https://fishing-xbds.onrender.com/api/sos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': 'fishing123' },
-      body: JSON.stringify({
-        code: code,
-        lat: position.coords.latitude,
-        lon: position.coords.longitude,
-        note: "🚨 SOS - نداء استغاثة"
-      })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.status === 'success') {
-        alert("✅ تم إرسال نداء الاستغاثة!\n\nسيتم إعلام المستجيبين بموقعك.");
-      } else {
-        alert("❌ فشل الإرسال: " + (data.detail || "خطأ غير معروف"));
-      }
-    })
-    .catch(function() {
-      alert("❌ خطأ في الاتصال بالخادم");
-    });
-  }, function() {
-    alert("❌ لا يمكن تحديد موقعك. تأكد من تشغيل GPS.");
-  });
-}
-
-// دالة تسجيل الدخول المطورة - تدعم الكود من الرابط
-window.doLogin = function(codeFromUrl) {
-  var code = codeFromUrl || document.getElementById('login-input').value.trim().toUpperCase();
-  if (!code) return;
-  
-  fetch('https://fishing-xbds.onrender.com/api/login/' + code, {
-    headers: { 'x-api-key': 'fishing123' }
-  })
-  .then(function(r) {
-    if (!r.ok) throw new Error('خطأ في الدخول');
-    return r.json();
-  })
-  .then(function(data) {
-    if (data.status === 'success') {
-      localStorage.setItem('fisherman_code', data.code);
-      localStorage.setItem('fisherman_name', data.name);
-      localStorage.setItem('fisherman_phone', data.phone);
-      document.getElementById('login-overlay').style.display = 'none';
-      if (typeof initMap === 'function') initMap();
-    }
-  })
-  .catch(function(err) {
-    document.getElementById('login-error').style.display = 'block';
-  });
-};
-
-// قراءة الكود من الرابط عند تحميل الصفحة
-window.addEventListener('load', function() {
-  var urlParams = new URLSearchParams(window.location.search);
-  var codeFromUrl = urlParams.get('code');
-  if (codeFromUrl) {
-    window.doLogin(codeFromUrl);
-  } else {
-    var savedCode = localStorage.getItem('fisherman_code');
-    if (savedCode) {
-      document.getElementById('login-input').value = savedCode;
-      window.doLogin();
-    }
-  }
-});
 </script>
 
 <!-- زر التحديث العائم — مخفي، يظهر فقط عند وجود تحديث -->
