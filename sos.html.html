@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🚨 تنبيه طوارئ - دليل الصياد</title>
+<title>🚨 استقبال نداءات الاستغاثة - دليل الصياد</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -11,83 +11,90 @@ body {
   background: #0a0f1e;
   color: #e2e8f0;
   min-height: 100vh;
-  padding: 0;
-  margin: 0;
+  padding: 16px;
 }
-.sos-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #0a0f1e;
-  z-index: 9999;
-  overflow-y: auto;
-  padding: 20px;
+h1 {
+  text-align: center;
+  color: #d4af37;
+  font-size: 1.3rem;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(212,175,55,0.3);
+}
+.sos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.sos-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(239,68,68,0.4);
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+.sos-card.active {
+  border-color: #ef4444;
+  background: rgba(239,68,68,0.08);
 }
 .sos-header {
-  text-align: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  border-radius: 20px;
-  margin-bottom: 20px;
-  animation: pulse 1s infinite;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
-}
-.sos-header h1 {
-  font-size: 3rem;
-  margin-bottom: 10px;
-}
-.sos-header p {
+.sos-name {
   font-size: 1.2rem;
+  font-weight: bold;
+  color: #ef4444;
 }
-.info-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-.info-label {
-  font-size: 0.8rem;
+.sos-time {
+  font-size: 0.7rem;
   color: #94a3b8;
-  margin-bottom: 5px;
 }
-.info-value {
-  font-size: 1.3rem;
-  font-weight: bold;
-  color: #e2e8f0;
-}
-.phone-number {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #4ade80;
-  text-align: center;
-  padding: 15px;
-  background: rgba(74,222,128,0.1);
-  border-radius: 16px;
+.sos-phone {
+  background: rgba(74,222,128,0.15);
   border: 2px solid #4ade80;
-  margin: 15px 0;
+  border-radius: 16px;
+  padding: 12px;
+  margin: 12px 0;
+  text-align: center;
   direction: ltr;
 }
-.phone-number a {
+.sos-phone-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 5px;
+  display: block;
+}
+.sos-phone-number {
+  font-size: 1.8rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.sos-phone-number a {
   color: #4ade80;
   text-decoration: none;
   display: block;
 }
-.location-row {
+.sos-location {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 8px 0;
+}
+.location-buttons {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  margin: 12px 0;
 }
 .location-btn {
   flex: 1;
-  padding: 14px;
-  border-radius: 12px;
-  font-size: 1rem;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
   font-weight: bold;
   cursor: pointer;
   text-align: center;
@@ -105,252 +112,221 @@ body {
 }
 .btn-respond {
   width: 100%;
-  padding: 18px;
+  padding: 12px;
   background: linear-gradient(135deg, #22c55e, #16a34a);
   border: none;
-  border-radius: 16px;
-  font-size: 1.4rem;
+  border-radius: 12px;
+  font-size: 1rem;
   font-weight: bold;
   color: white;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 8px;
   transition: transform 0.2s;
 }
 .btn-respond:active { transform: scale(0.98); }
-.btn-close {
+.btn-respond.responded {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  opacity: 0.7;
+}
+.btn-refresh {
   width: 100%;
-  padding: 14px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 12px;
-  color: #e2e8f0;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-top: 10px;
-}
-.responders-list {
-  background: rgba(255,255,255,0.03);
-  border-radius: 12px;
   padding: 12px;
-  margin-top: 15px;
+  background: rgba(212,175,55,0.15);
+  border: 1px solid #d4af37;
+  color: #d4af37;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 16px;
 }
-.responder-item {
-  padding: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  font-size: 0.85rem;
-}
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  margin-top: 10px;
-}
-.status-pending { background: rgba(234,179,8,0.2); color: #eab308; }
-.status-responding { background: rgba(34,197,94,0.2); color: #22c55e; }
-.countdown {
-  text-align: center;
-  font-size: 0.8rem;
-  color: #64748b;
-  margin-top: 15px;
+.loading { text-align: center; color: #64748b; padding: 40px; }
+.error { text-align: center; color: #ef4444; padding: 20px; }
+.empty { text-align: center; color: #64748b; padding: 40px; }
+.responders-count {
+  font-size: 0.75rem;
+  color: #22c55e;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
 </style>
 </head>
 <body>
-<div id="sosContainer" class="sos-container">
-  <div class="sos-header">
-    <h1>🚨 🚨 🚨</h1>
-    <p>تنبيه طوارئ - استغاثة عاجلة</p>
-  </div>
-  
-  <div class="info-card">
-    <div class="info-label">👤 المستغيث</div>
-    <div class="info-value" id="victimName">جاري التحميل...</div>
-    <div class="info-label" style="margin-top: 10px;">📝 الكود</div>
-    <div class="info-value" id="victimCode">---</div>
-  </div>
-  
-  <div class="info-card">
-    <div class="info-label">📞 رقم الهاتف (اضغط للاتصال)</div>
-    <div class="phone-number" id="phoneNumber">
-      <a href="tel:">جاري التحميل...</a>
-    </div>
-  </div>
-  
-  <div class="info-card">
-    <div class="info-label">📍 الموقع</div>
-    <div class="info-value" id="locationCoords">جاري التحميل...</div>
-    <div class="location-row">
-      <button class="location-btn btn-map" onclick="showOnMap()">🗺️ عرض على خريطة الموقع</button>
-      <button class="location-btn btn-google" onclick="openGoogleMaps()">🧭 فتح في خرائط جوجل</button>
-    </div>
-  </div>
-  
-  <div class="info-card">
-    <div class="info-label">🚤 الحالة</div>
-    <div class="info-value" id="victimNote">نداء استغاثة - يحتاج مساعدة فورية</div>
-  </div>
-  
-  <div class="info-card" id="respondersCard" style="display:none;">
-    <div class="info-label">👥 المستجيبون القادمون</div>
-    <div id="respondersList" class="responders-list">
-      <div class="responder-item">⏳ جاري تحديث المستجيبين...</div>
-    </div>
-  </div>
-  
-  <button class="btn-respond" id="respondBtn" onclick="respondToSOS()">🚤 أنا متجه للمساعدة</button>
-  <button class="btn-close" onclick="closeSOSWindow()">إغلاق</button>
-  <div class="countdown" id="countdown"></div>
+
+<h1>🚨 استقبال نداءات الاستغاثة</h1>
+
+<button class="btn-refresh" onclick="loadActiveSOS()">🔄 تحديث</button>
+
+<div id="sosList" class="sos-list">
+  <div class="loading">جاري تحميل النداءات...</div>
 </div>
 
 <script>
-var API_BASE = "https://fishing-xbds.onrender.com";
-var API_KEY = "fishing123";
-var currentUserCode = localStorage.getItem('fisherman_code');
-var currentUserName = localStorage.getItem('fisherman_name');
-var currentUserPhone = localStorage.getItem('fisherman_phone');
-var sosData = null;
-var eventSource = null;
+var API_BASE_SOS = "https://fishing-xbds.onrender.com";
+var API_KEY_SOS = "fishing123";
+var currentResponderCode = localStorage.getItem('fisherman_code');
+var currentResponderName = localStorage.getItem('fisherman_name');
+var currentResponderPhone = localStorage.getItem('fisherman_phone');
 
-// قراءة بيانات SOS من الرابط
-function getSOSDataFromURL() {
-  var params = new URLSearchParams(window.location.search);
-  return {
-    code: params.get('code'),
-    lat: parseFloat(params.get('lat')),
-    lon: parseFloat(params.get('lon')),
-    note: params.get('note') || 'نداء استغاثة',
-    name: params.get('name') || '',
-    phone: params.get('phone') || '',
-    time: params.get('time') || ''
-  };
-}
+// خريطة عالمية لعرض الموقع
+var sosMap = null;
+var sosMarker = null;
 
-function loadSOSData() {
-  sosData = getSOSDataFromURL();
+function loadActiveSOS() {
+  var container = document.getElementById('sosList');
+  container.innerHTML = '<div class="loading">جاري تحميل النداءات...</div>';
   
-  if (!sosData.code) {
-    document.getElementById('victimName').innerHTML = 'بيانات غير متوفرة';
-    document.getElementById('phoneNumber').innerHTML = '<a href="#">---</a>';
-    return;
-  }
-  
-  document.getElementById('victimName').innerHTML = sosData.name || 'صياد';
-  document.getElementById('victimCode').innerHTML = sosData.code;
-  document.getElementById('locationCoords').innerHTML = sosData.lat + '° N, ' + sosData.lon + '° E';
-  document.getElementById('victimNote').innerHTML = sosData.note;
-  
-  var phoneLink = document.getElementById('phoneNumber').querySelector('a');
-  if (sosData.phone) {
-    phoneLink.href = 'tel:' + sosData.phone;
-    phoneLink.innerHTML = '📱 ' + sosData.phone;
-  } else {
-    phoneLink.innerHTML = 'رقم غير متوفر';
-  }
-  
-  // بدء تحديث المستجيبين كل 10 ثواني
-  startUpdatingResponders();
-}
-
-function showOnMap() {
-  if (typeof map !== 'undefined' && map) {
-    map.setView([sosData.lat, sosData.lon], 15);
-    if (typeof L !== 'undefined') {
-      L.marker([sosData.lat, sosData.lon]).addTo(map).bindPopup('📍 موقع المستغيث').openPopup();
+  fetch(API_BASE_SOS + '/api/sos/active', {
+    headers: { 'x-api-key': API_KEY_SOS }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.status === 'success' && data.active_sos && data.active_sos.length > 0) {
+      displaySOSList(data.active_sos);
+    } else {
+      container.innerHTML = '<div class="empty">لا توجد نداءات استغاثة نشطة حالياً</div>';
     }
-    closeSOSWindow();
-  } else {
-    openGoogleMaps();
-  }
+  })
+  .catch(function() {
+    container.innerHTML = '<div class="error">حدث خطأ في تحميل النداءات</div>';
+  });
 }
 
-function openGoogleMaps() {
-  var url = `https://www.google.com/maps/dir/?api=1&destination=${sosData.lat},${sosData.lon}`;
+function displaySOSList(sosList) {
+  var container = document.getElementById('sosList');
+  var html = '';
+  
+  sosList.forEach(function(sos) {
+    var timeFormatted = new Date(sos.time).toLocaleString('ar');
+    var respondersCount = sos.responders_count || 0;
+    var phoneNumber = sos.phone || 'رقم غير متوفر';
+    
+    html += `
+      <div class="sos-card active" id="sos-card-${sos.id}" data-lat="${sos.lat}" data-lon="${sos.lon}" data-name="${sos.name || sos.code}" data-phone="${phoneNumber}">
+        <div class="sos-header">
+          <span class="sos-name">🚨 ${sos.name || sos.code}</span>
+          <span class="sos-time">${timeFormatted}</span>
+        </div>
+        <div class="sos-phone">
+          <span class="sos-phone-label">📞 رقم الهاتف (اضغط للاتصال المباشر)</span>
+          <div class="sos-phone-number">
+            <a href="tel:${phoneNumber}">${phoneNumber}</a>
+          </div>
+        </div>
+        <div class="sos-location">
+          📍 الموقع: ${sos.lat}, ${sos.lon}
+        </div>
+        <div class="location-buttons">
+          <button class="location-btn btn-map" onclick="showOnMap('${sos.id}')">🗺️ عرض على الخريطة</button>
+          <button class="location-btn btn-google" onclick="openGoogleMaps(${sos.lat}, ${sos.lon})">🧭 فتح في خرائط جوجل</button>
+        </div>
+        <button class="btn-respond" id="respond-btn-${sos.id}" onclick="respondToSOS('${sos.code}')">🚤 أنا متجه للمساعدة</button>
+        <div class="responders-count" id="responders-count-${sos.id}">👥 عدد المستجيبين: ${respondersCount}</div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+function showOnMap(sosId) {
+  var card = document.getElementById('sos-card-' + sosId);
+  if (!card) return;
+  
+  var lat = parseFloat(card.getAttribute('data-lat'));
+  var lon = parseFloat(card.getAttribute('data-lon'));
+  var name = card.getAttribute('data-name');
+  var phone = card.getAttribute('data-phone');
+  
+  // إنشاء نافذة خريطة منبثقة
+  var modalHtml = `
+    <div id="mapModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; display:flex; flex-direction:column;">
+      <div style="background:#0a0f1e; padding:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #d4af37;">
+        <span style="color:#d4af37;">📍 موقع المستغيث: ${name}</span>
+        <button onclick="closeMapModal()" style="background:#ef4444; border:none; color:white; padding:6px 12px; border-radius:8px; cursor:pointer;">✕ إغلاق</button>
+      </div>
+      <div id="sosMapContainer" style="flex:1; width:100%;"></div>
+      <div style="background:#0a0f1e; padding:12px; text-align:center; border-top:1px solid rgba(255,255,255,0.1);">
+        <a href="tel:${phone}" style="color:#4ade80; text-decoration:none; font-size:1.2rem;">📞 الاتصال بالمستغيث: ${phone}</a>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  
+  // تحميل الخريطة
+  var mapContainer = document.getElementById('sosMapContainer');
+  var map = L.map(mapContainer).setView([lat, lon], 15);
+  
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+  }).addTo(map);
+  
+  L.marker([lat, lon]).addTo(map)
+    .bindPopup('<b>' + name + '</b><br>📞 ' + phone + '<br>📍 موقع الاستغاثة')
+    .openPopup();
+}
+
+function closeMapModal() {
+  var modal = document.getElementById('mapModal');
+  if (modal) modal.remove();
+}
+
+function openGoogleMaps(lat, lon) {
+  var url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   window.open(url, '_blank');
 }
 
-function respondToSOS() {
-  if (!currentUserCode) {
-    alert('الرجاء تسجيل الدخول أولاً');
+function respondToSOS(sosCode) {
+  if (!currentResponderCode) {
+    alert("⚠️ الرجاء تسجيل الدخول أولاً");
     return;
   }
   
-  var btn = document.getElementById('respondBtn');
+  var btn = document.getElementById('respond-btn-' + sosCode);
   btn.disabled = true;
   btn.innerHTML = '⏳ جاري التسجيل...';
   
-  fetch(API_BASE + '/api/sos/respond', {
+  fetch(API_BASE_SOS + '/api/sos/respond', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY
+      'x-api-key': API_KEY_SOS
     },
     body: JSON.stringify({
-      sos_code: sosData.code,
-      responder_code: currentUserCode,
-      responder_name: currentUserName,
-      responder_phone: currentUserPhone
+      sos_code: sosCode,
+      responder_code: currentResponderCode,
+      responder_name: currentResponderName || currentResponderCode,
+      responder_phone: currentResponderPhone || ''
     })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.status === 'success') {
       btn.innerHTML = '✅ تم تسجيل استجابتك';
-      btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
-      showNotification('تم تسجيل استجابتك! المستغيث سيرى أنك في طريقك.', 'success');
-      startUpdatingResponders();
+      btn.classList.add('responded');
+      loadActiveSOS();
     } else {
-      btn.innerHTML = '🚤 أنا متجه للمساعدة';
+      alert("❌ فشل التسجيل: " + (data.detail || "خطأ غير معروف"));
       btn.disabled = false;
-      showNotification(data.detail || 'حدث خطأ', 'error');
+      btn.innerHTML = '🚤 أنا متجه للمساعدة';
     }
   })
   .catch(function() {
-    btn.innerHTML = '🚤 أنا متجه للمساعدة';
+    alert("❌ خطأ في الاتصال بالخادم");
     btn.disabled = false;
-    showNotification('خطأ في الاتصال', 'error');
+    btn.innerHTML = '🚤 أنا متجه للمساعدة';
   });
 }
 
-function startUpdatingResponders() {
-  updateRespondersList();
-  setInterval(updateRespondersList, 10000);
-}
-
-function updateRespondersList() {
-  fetch(API_BASE + '/api/sos/responders/' + sosData.code, {
-    headers: { 'x-api-key': API_KEY }
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.status === 'success' && data.responders && data.responders.length > 0) {
-      document.getElementById('respondersCard').style.display = 'block';
-      var html = '';
-      data.responders.forEach(function(r) {
-        html += '<div class="responder-item">🚤 ' + (r.name || r.code) + ' - متجه للمساعدة</div>';
-      });
-      document.getElementById('respondersList').innerHTML = html;
-    }
-  })
-  .catch(function() {});
-}
-
-function closeSOSWindow() {
-  window.close();
-  window.location.href = '/fishing-map/';
-}
-
-function showNotification(message, type) {
-  var div = document.createElement('div');
-  div.textContent = message;
-  div.style.cssText = 'position:fixed;bottom:20px;right:20px;background:' + 
-    (type === 'success' ? '#22c55e' : '#ef4444') + 
-    ';color:white;padding:12px 20px;border-radius:8px;z-index:10000;font-size:0.85rem;';
-  document.body.appendChild(div);
-  setTimeout(function() { div.remove(); }, 4000);
-}
-
-loadSOSData();
+loadActiveSOS();
+setInterval(loadActiveSOS, 15000);
 </script>
+
+<!-- Leaflet للخريطة -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
 </body>
 </html>
