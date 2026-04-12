@@ -2,7 +2,6 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a0f1e">
 <meta name="mobile-web-app-capable" content="yes">
@@ -10,15 +9,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="خريطة الصيد">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS ونظام طوارئ.">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
 <title>خريطة الصياد التفاعلية</title>
-
-<!-- مكتبات خارجية -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
-
-<!-- ملف التنسيقات -->
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* جعل السطر الثاني قابل للتمرير */
@@ -51,80 +46,42 @@
 </head>
 <body>
 
-<!-- شاشة التحميل -->
 <div class="loading-bar" id="loading-bar">
   <div class="spinner"></div>
   <div class="loading-text" id="loading-text">جاري تحميل الخريطة...</div>
 </div>
 
-<!-- الخريطة -->
 <div id="map"></div>
 
-<!-- شاشة الدخول -->
 <div class="login-overlay" id="login-overlay">
   <div class="login-box">
     <div class="login-icon">🎣</div>
     <div class="login-title">دليل الصياد</div>
     <div class="login-sub">أدخل كودك الخاص للوصول إلى الخريطة وإرسال تقاريرك</div>
-    <input class="login-input" id="login-input" type="text"
-           placeholder="FISHER_01" maxlength="20"
-           oninput="this.value=this.value.toUpperCase()"
-           onkeypress="if(event.key==='Enter') doLogin()">
+    <input class="login-input" id="login-input" type="text" placeholder="FISHER_01" maxlength="20" oninput="this.value=this.value.toUpperCase()" onkeypress="if(event.key==='Enter') doLogin()">
     <button class="login-btn" onclick="doLogin()">دخول &#8594;</button>
     <div class="login-error" id="login-error">&#10060; كود غير صحيح — تواصل مع المشرف</div>
   </div>
 </div>
 
-<!-- شريط أدوات القياس -->
 <div class="measurement-toolbar" id="measurement-toolbar" style="display:none;">
-  <button type="button" class="measurement-btn" id="measure-distance-btn" onclick="toggleDistanceMeasurement()">
-    📏 مسافة
-  </button>
-  <button type="button" class="measurement-btn" id="measure-area-btn" onclick="toggleAreaMeasurement()">
-    📐 مساحة
-  </button>
-  <button type="button" class="measurement-btn" id="clear-measurements-btn" onclick="clearMeasurements()">
-    🗑️ مسح
-  </button>
+  <button type="button" class="measurement-btn" id="measure-distance-btn" onclick="toggleDistanceMeasurement()">📏 مسافة</button>
+  <button type="button" class="measurement-btn" id="measure-area-btn" onclick="toggleAreaMeasurement()">📐 مساحة</button>
+  <button type="button" class="measurement-btn" id="clear-measurements-btn" onclick="clearMeasurements()">🗑️ مسح</button>
 </div>
 
-<!-- زر النجمة — معالم الصياد -->
-<button type="button" class="star-fab" id="star-fab" onclick="toggleStarMenu()">
-  ⭐
-</button>
+<button type="button" class="star-fab" id="star-fab" onclick="toggleStarMenu()">⭐</button>
 
-<!-- قائمة ألوان النجمة -->
 <div class="star-menu" id="star-menu">
-  <button type="button" class="star-color-btn" id="star-red-btn"
-          onclick="activateStarMode('red')" title="نجمة حمراء — موقع مهم">
-    🔴
-  </button>
-  <button type="button" class="star-color-btn" id="star-green-btn"
-          onclick="activateStarMode('green')" title="نجمة خضراء — صيد جيد">
-    🟢
-  </button>
-  <button type="button" class="star-color-btn" id="star-yellow-btn"
-          onclick="activateStarMode('yellow')" title="نجمة صفراء — ملاحظة">
-    🟡
-  </button>
+  <button type="button" class="star-color-btn" id="star-red-btn" onclick="activateStarMode('red')" title="نجمة حمراء — موقع مهم">🔴</button>
+  <button type="button" class="star-color-btn" id="star-green-btn" onclick="activateStarMode('green')" title="نجمة خضراء — صيد جيد">🟢</button>
+  <button type="button" class="star-color-btn" id="star-yellow-btn" onclick="activateStarMode('yellow')" title="نجمة صفراء — ملاحظة">🟡</button>
 </div>
 
-<!-- زر القياس -->
-<button type="button" class="measurement-fab" id="measurement-fab" onclick="toggleMeasurementToolbar()">
-  📏
-</button>
+<button type="button" class="measurement-fab" id="measurement-fab" onclick="toggleMeasurementToolbar()">📏</button>
+<button type="button" class="correction-fab" id="correction-fab" onclick="openCorrection()" style="display:none;">تصحيح</button>
+<button type="button" class="report-fab" id="report-fab" onclick="openRating()" style="display:none;align-items:center;justify-content:center;">📃</button>
 
-<!-- زر تصحيح -->
-<button type="button" class="correction-fab" id="correction-fab" onclick="openCorrection()" style="display:none;">
-  تصحيح
-</button>
-
-<!-- زر إرسال تقييم -->
-<button type="button" class="report-fab" id="report-fab" onclick="openRating()" style="display:none;align-items:center;justify-content:center;">
-  📃
-</button>
-
-<!-- نافذة التقييم -->
 <div class="rating-panel" id="rating-panel">
   <div class="rating-header">
     <div class="rating-title">📃 تقييم موقع الصيد</div>
@@ -145,7 +102,6 @@
   <div class="send-status" id="send-status"></div>
 </div>
 
-<!-- نافذة التصحيح (مخاطر بحرية) -->
 <div class="correction-panel" id="correction-panel">
   <div class="rating-header">
     <div class="rating-title">🔧 تصحيح — إبلاغ عن مُخاطر</div>
@@ -171,7 +127,6 @@
   <div class="send-status" id="correction-send-status"></div>
 </div>
 
-<!-- سلم الألوان -->
 <div class="legend" id="legend">
   <div class="legend-title" id="legend-title">حرارة السطح °C</div>
   <canvas class="legend-bar" id="legend-bar" width="200" height="14"></canvas>
@@ -181,10 +136,8 @@
   </div>
 </div>
 
-<!-- Tooltip الخريطة -->
 <div class="map-tooltip" id="map-tooltip"></div>
 
-<!-- الشريط العلوي -->
 <div class="top-bar">
   <div class="top-bar-row1">
     <div class="brand">
@@ -213,7 +166,6 @@
     <div class="layer-tab" id="bathy-wrecks-btn" onclick="toggleBathyWrecks(this)"><span class="layer-tab-icon">⚓</span><span class="layer-tab-label">حطام رسمي</span></div>
   </div>
 
-  <!-- قائمة الأخطار المنسدلة -->
   <div id="dangers-dropdown" style="display:none;margin-top:6px;background:rgba(6,13,24,0.95);border:1px solid var(--border);border-radius:12px;padding:8px;">
     <div class="danger-item"><input type="checkbox" id="danger-rocks" onchange="toggleDanger('rocks', this.checked)"><label for="danger-rocks">🪨 مناطق صخرية</label></div>
     <div class="danger-item"><input type="checkbox" id="danger-wrecks" onchange="toggleDanger('wrecks', this.checked)"><label for="danger-wrecks">⚓ حطام سفن</label></div>
@@ -221,7 +173,7 @@
     <div class="danger-item"><input type="checkbox" id="danger-debris" onchange="toggleDanger('debris', this.checked)"><label for="danger-debris">🗑️ مخلفات</label></div>
   </div>
 
-  <!-- أزرار المسارات والتيارات + زر SOS (قابل للتمرير) -->
+  <!-- السطر الثاني القابل للتمرير -->
   <div class="scrollable-row" style="margin-top:6px;">
     <div class="layer-tab" id="route-btn" onclick="toggleRoutes(this)" style="background:rgba(6,214,160,0.1);border-color:rgba(6,214,160,0.3);">
       <span class="layer-tab-icon">📍</span>
@@ -235,8 +187,7 @@
       <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
       <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
     </div>
-    <!-- زر الطوارئ SOS -->
-    <div class="layer-tab" id="sos-tab" onclick="sendSOS()" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
+    <div class="layer-tab" id="sos-tab" onclick="alert('سيتم إرسال نداء الاستغاثة قريباً')" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
       <span class="layer-tab-icon">🚨</span>
       <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
     </div>
@@ -249,7 +200,6 @@
   <div class="data-banner" id="data-banner" role="alert"></div>
 </div>
 
-<!-- الشريط السفلي -->
 <div class="info-panel">
   <div class="info-row">
     <div class="info-card"><div class="info-val" id="info-lat">--</div><div class="info-lbl">خط العرض</div></div>
@@ -468,87 +418,6 @@
 
   initStars();
 })();
-</script>
-
-<!-- ===== نظام الطوارئ SOS ===== -->
-<script>
-function sendSOS() {
-  var code = localStorage.getItem('fisherman_code');
-  if (!code) {
-    alert("⚠️ الرجاء تسجيل الدخول أولاً");
-    return;
-  }
-  if (!navigator.geolocation) {
-    alert("❌ المتصفح لا يدعم تحديد الموقع");
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(function(position) {
-    fetch('https://fishing-xbds.onrender.com/api/sos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': 'fishing123' },
-      body: JSON.stringify({
-        code: code,
-        lat: position.coords.latitude,
-        lon: position.coords.longitude,
-        note: "🚨 SOS - نداء استغاثة"
-      })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.status === 'success') {
-        alert("✅ تم إرسال نداء الاستغاثة!\n\nسيتم إعلام المستجيبين بموقعك.");
-      } else {
-        alert("❌ فشل الإرسال: " + (data.detail || "خطأ غير معروف"));
-      }
-    })
-    .catch(function() {
-      alert("❌ خطأ في الاتصال بالخادم");
-    });
-  }, function() {
-    alert("❌ لا يمكن تحديد موقعك. تأكد من تشغيل GPS.");
-  });
-}
-
-// دالة تسجيل الدخول المطورة - تدعم الكود من الرابط
-window.doLogin = function(codeFromUrl) {
-  var code = codeFromUrl || document.getElementById('login-input').value.trim().toUpperCase();
-  if (!code) return;
-  
-  fetch('https://fishing-xbds.onrender.com/api/login/' + code, {
-    headers: { 'x-api-key': 'fishing123' }
-  })
-  .then(function(r) {
-    if (!r.ok) throw new Error('خطأ في الدخول');
-    return r.json();
-  })
-  .then(function(data) {
-    if (data.status === 'success') {
-      localStorage.setItem('fisherman_code', data.code);
-      localStorage.setItem('fisherman_name', data.name);
-      localStorage.setItem('fisherman_phone', data.phone);
-      document.getElementById('login-overlay').style.display = 'none';
-      if (typeof initMap === 'function') initMap();
-    }
-  })
-  .catch(function(err) {
-    document.getElementById('login-error').style.display = 'block';
-  });
-};
-
-// قراءة الكود من الرابط عند تحميل الصفحة
-window.addEventListener('load', function() {
-  var urlParams = new URLSearchParams(window.location.search);
-  var codeFromUrl = urlParams.get('code');
-  if (codeFromUrl) {
-    window.doLogin(codeFromUrl);
-  } else {
-    var savedCode = localStorage.getItem('fisherman_code');
-    if (savedCode) {
-      document.getElementById('login-input').value = savedCode;
-      window.doLogin();
-    }
-  }
-});
 </script>
 
 <button id="update-fab" onclick="doAppUpdate()" style="display:none; position:fixed; bottom:272px; right:14px; z-index:2000; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#06d6a0,#00a87a); border:2px solid rgba(255,255,255,0.3); cursor:pointer; font-size:1.4rem; align-items:center; justify-content:center; animation:updatePulse 1.8s infinite;" title="تحديث جديد — اضغط للتحديث">🔄</button>
