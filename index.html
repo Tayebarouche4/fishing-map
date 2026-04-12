@@ -459,6 +459,47 @@ function sendSOS() {
     alert("❌ لا يمكن تحديد موقعك. تأكد من تشغيل GPS.");
   });
 }
+
+// دالة تسجيل الدخول المطورة - تدعم الكود من الرابط
+window.doLogin = function(codeFromUrl) {
+  var code = codeFromUrl || document.getElementById('login-input').value.trim().toUpperCase();
+  if (!code) return;
+  
+  fetch('https://fishing-xbds.onrender.com/api/login/' + code, {
+    headers: { 'x-api-key': 'fishing123' }
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error('خطأ في الدخول');
+    return r.json();
+  })
+  .then(function(data) {
+    if (data.status === 'success') {
+      localStorage.setItem('fisherman_code', data.code);
+      localStorage.setItem('fisherman_name', data.name);
+      localStorage.setItem('fisherman_phone', data.phone);
+      document.getElementById('login-overlay').style.display = 'none';
+      if (typeof initMap === 'function') initMap();
+    }
+  })
+  .catch(function(err) {
+    document.getElementById('login-error').style.display = 'block';
+  });
+};
+
+// قراءة الكود من الرابط عند تحميل الصفحة
+window.addEventListener('load', function() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var codeFromUrl = urlParams.get('code');
+  if (codeFromUrl) {
+    window.doLogin(codeFromUrl);
+  } else {
+    var savedCode = localStorage.getItem('fisherman_code');
+    if (savedCode) {
+      document.getElementById('login-input').value = savedCode;
+      window.doLogin();
+    }
+  }
+});
 </script>
 
 <button id="update-fab" onclick="doAppUpdate()" style="display:none; position:fixed; bottom:272px; right:14px; z-index:2000; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#06d6a0,#00a87a); border:2px solid rgba(255,255,255,0.3); cursor:pointer; font-size:1.4rem; align-items:center; justify-content:center; animation:updatePulse 1.8s infinite;" title="تحديث جديد — اضغط للتحديث">🔄</button>
