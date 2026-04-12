@@ -424,7 +424,8 @@
 <!-- ===== نظام الطوارئ SOS ===== -->
 <script>
 function sendSOS() {
-  if (typeof currentUserCode === 'undefined' || !currentUserCode) {
+  var code = localStorage.getItem('fisherman_code');
+  if (!code) {
     alert("⚠️ الرجاء تسجيل الدخول أولاً");
     return;
   }
@@ -437,7 +438,7 @@ function sendSOS() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': 'fishing123' },
       body: JSON.stringify({
-        code: currentUserCode,
+        code: code,
         lat: position.coords.latitude,
         lon: position.coords.longitude,
         note: "🚨 SOS - نداء استغاثة"
