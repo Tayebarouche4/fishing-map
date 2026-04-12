@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="خريطة الصيد">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS.">
+<meta name="description" content="خريطة تفاعلية لظروف البحر والصيد مع تقارير وGPS ونظام طوارئ.">
 <title>خريطة الصياد التفاعلية</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -187,7 +187,8 @@
       <span class="layer-tab-icon" style="color:#8b5cf6;">🌊</span>
       <span class="layer-tab-label" style="color:#8b5cf6;">تيار العمق 50م</span>
     </div>
-    <div class="layer-tab" id="sos-tab" onclick="alert('سيتم إرسال نداء الاستغاثة قريباً')" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
+    <!-- زر الطوارئ SOS -->
+    <div class="layer-tab" id="sos-tab" onclick="sendSOS()" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);">
       <span class="layer-tab-icon">🚨</span>
       <span class="layer-tab-label" style="color:#ef4444;"> SOS</span>
     </div>
@@ -418,6 +419,45 @@
 
   initStars();
 })();
+</script>
+
+<!-- ===== نظام الطوارئ SOS ===== -->
+<script>
+function sendSOS() {
+  if (typeof currentUserCode === 'undefined' || !currentUserCode) {
+    alert("⚠️ الرجاء تسجيل الدخول أولاً");
+    return;
+  }
+  if (!navigator.geolocation) {
+    alert("❌ المتصفح لا يدعم تحديد الموقع");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(function(position) {
+    fetch('https://fishing-xbds.onrender.com/api/sos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': 'fishing123' },
+      body: JSON.stringify({
+        code: currentUserCode,
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        note: "🚨 SOS - نداء استغاثة"
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.status === 'success') {
+        alert("✅ تم إرسال نداء الاستغاثة!\n\nسيتم إعلام المستجيبين بموقعك.");
+      } else {
+        alert("❌ فشل الإرسال: " + (data.detail || "خطأ غير معروف"));
+      }
+    })
+    .catch(function() {
+      alert("❌ خطأ في الاتصال بالخادم");
+    });
+  }, function() {
+    alert("❌ لا يمكن تحديد موقعك. تأكد من تشغيل GPS.");
+  });
+}
 </script>
 
 <button id="update-fab" onclick="doAppUpdate()" style="display:none; position:fixed; bottom:272px; right:14px; z-index:2000; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#06d6a0,#00a87a); border:2px solid rgba(255,255,255,0.3); cursor:pointer; font-size:1.4rem; align-items:center; justify-content:center; animation:updatePulse 1.8s infinite;" title="تحديث جديد — اضغط للتحديث">🔄</button>
