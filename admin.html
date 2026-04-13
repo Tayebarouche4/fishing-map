@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحكم المشرف — خريطة الصياد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg:        #060d18;
+  --surface:   #0a1628;
+  --border:    rgba(255,255,255,0.08);
+  --gold:      #f59e0b;
+  --green:     #06d6a0;
+  --red:       #ef4444;
+  --blue:      #38bdf8;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --card:      rgba(255,255,255,0.04);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Tajawal',sans-serif;
+  min-height:100vh;
+}
+
+/* ===== شاشة الدخول ===== */
+#login-screen {
+  position:fixed; inset:0; z-index:9999;
+  background:radial-gradient(ellipse at 50% 30%, #0f2a4a 0%, #060d18 70%);
+  display:flex; align-items:center; justify-content:center;
+}
+.login-card {
+  background:rgba(10,22,40,0.95);
+  border:1px solid rgba(245,158,11,0.3);
+  border-radius:20px; padding:48px 40px;
+  width:360px; text-align:center;
+  box-shadow:0 0 60px rgba(245,158,11,0.1);
+}
+.login-card h1 { font-size:1.6rem; color:var(--gold); margin-bottom:6px; }
+.login-card p  { color:var(--muted); font-size:.85rem; margin-bottom:32px; }
+.login-card input {
+  width:100%; padding:14px 18px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid var(--border); border-radius:12px;
+  color:var(--text); font-family:'Tajawal',sans-serif;
+  font-size:1rem; margin-bottom:16px; text-align:center;
+  letter-spacing:4px;
+}
+.login-card input:focus { outline:none; border-color:rgba(245,158,11,0.5); }
+.login-card button {
+  width:100%; padding:14px;
+  background:linear-gradient(135deg,#b45309,#92400e);
+  border:none; border-radius:12px;
+  color:white; font-family:'Tajawal',sans-serif;
+  font-size:1rem; font-weight:700; cursor:pointer;
+  transition:opacity .2s;
+}
+.login-card button:hover { opacity:.85; }
+.login-error { color:var(--red); font-size:.85rem; margin-top:12px; display:none; }
+
+/* ===== تخطيط رئيسي ===== */
+#app { display:none; height:100vh; flex-direction:column; }
+header {
+  padding:12px 20px;
+  background:rgba(10,22,40,0.98);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0;
+}
+.header-brand { display:flex; align-items:center; gap:12px; }
+.header-brand-icon { font-size:1.8rem; }
+.header-title { font-size:1.1rem; font-weight:900; color:var(--gold); }
+.header-sub   { font-size:.75rem; color:var(--muted); }
+.header-time  { font-size:.8rem; color:var(--green); font-weight:700; }
+
+/* ===== تبويبات ===== */
+.tabs {
+  display:flex; gap:4px; padding:10px 16px;
+  background:rgba(10,22,40,0.9);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0; overflow-x:auto;
+}
+.tab {
+  padding:8px 18px; border-radius:10px;
+  font-family:'Tajawal',sans-serif; font-size:.82rem; font-weight:700;
+  cursor:pointer; border:1px solid var(--border);
+  color:var(--muted); background:transparent;
+  white-space:nowrap; transition:all .2s;
+}
+.tab.active { background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:var(--gold); }
+.tab:hover  { border-color:rgba(255,255,255,0.2); color:var(--text); }
+
+/* ===== محتوى التبويبات ===== */
+.panel { display:none; flex:1; overflow:hidden; }
+.panel.active { display:flex; }
+
+/* ===== تبويب الخريطة ===== */
+#map-panel { position:relative; }
+#admin-map  { width:100%; height:100%; }
+.map-legend {
+  position:absolute; bottom:16px; right:16px; z-index:1000;
+  background:rgba(6,13,24,0.92);
+  border:1px solid var(--border); border-radius:12px;
+  padding:12px 16px; font-size:.75rem;
+}
+.map-legend-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.map-legend-row:last-child { margin-bottom:0; }
+.boats-count {
+  position:absolute; top:16px; right:16px; z-index:1000;
+  background:rgba(6,214,160,0.15);
+  border:1px solid rgba(6,214,160,0.4);
+  border-radius:12px; padding:10px 16px;
+  font-size:.85rem; font-weight:700; color:var(--green);
+}
+
+/* ===== تبويب المستخدمين ===== */
+#users-panel { flex-direction:column; overflow:hidden; }
+.users-toolbar {
+  padding:12px 16px;
+  background:rgba(10,22,40,0.9);
+  border-bottom:1px solid var(--border);
+  display:flex; gap:10px; align-items:center;
+  flex-shrink:0;
+}
+.search-input {
+  flex:1; padding:8px 14px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border); border-radius:10px;
+  color:var(--text); font-family:'Tajawal',sans-serif;
+  font-size:.85rem;
+}
+.search-input:focus { outline:none; border-color:rgba(255,255,255,0.2); }
+.users-list { flex:1; overflow-y:auto; padding:12px; }
+.user-card {
+  background:var(--card);
+  border:1px solid var(--border); border-radius:14px;
+  padding:16px; margin-bottom:10px;
+  transition:border-color .2s;
+}
+.user-card:hover { border-color:rgba(255,255,255,0.15); }
+.user-card.sos-active { border-color:var(--red); background:rgba(239,68,68,0.08); animation:cardPulse 1s infinite; }
+@keyframes cardPulse { 0%,100%{border-color:var(--red)} 50%{border-color:rgba(239,68,68,0.3)} }
+.user-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.user-info { display:flex; align-items:center; gap:10px; }
+.user-avatar {
+  width:40px; height:40px; border-radius:50%;
+  background:linear-gradient(135deg,#1e3a5f,#0f2a4a);
+  border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.1rem;
+}
+.user-name  { font-size:.95rem; font-weight:700; }
+.user-code  { font-size:.72rem; color:var(--muted); }
+.user-badges { display:flex; gap:6px; }
+.badge {
+  padding:3px 10px; border-radius:20px;
+  font-size:.68rem; font-weight:700;
+}
+.badge-active   { background:rgba(6,214,160,0.15); color:var(--green); border:1px solid rgba(6,214,160,0.3); }
+.badge-inactive { background:rgba(239,68,68,0.15); color:var(--red);   border:1px solid rgba(239,68,68,0.3); }
+.badge-online   { background:rgba(56,189,248,0.15); color:var(--blue);  border:1px solid rgba(56,189,248,0.3); }
+.badge-sos      { background:rgba(239,68,68,0.3);   color:#fff;         border:1px solid var(--red); animation:badgePulse .8s infinite; }
+@keyframes badgePulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.perms-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:6px; margin-top:10px;
+}
+.perm-toggle {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:6px 10px; border-radius:8px;
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border); cursor:pointer;
+  font-size:.72rem; color:var(--muted);
+  transition:all .2s;
+}
+.perm-toggle.enabled { background:rgba(6,214,160,0.08); border-color:rgba(6,214,160,0.25); color:var(--green); }
+.perm-toggle.tracking-perm.enabled { background:rgba(56,189,248,0.08); border-color:rgba(56,189,248,0.25); color:var(--blue); }
+.toggle-dot {
+  width:10px; height:10px; border-radius:50%;
+  background:var(--muted); transition:background .2s;
+}
+.perm-toggle.enabled .toggle-dot { background:var(--green); }
+.perm-toggle.tracking-perm.enabled .toggle-dot { background:var(--blue); }
+.user-actions { display:flex; gap:6px; margin-top:10px; }
+.action-btn {
+  flex:1; padding:7px; border-radius:8px;
+  font-family:'Tajawal',sans-serif; font-size:.75rem;
+  font-weight:700; cursor:pointer; border:none;
+  transition:opacity .2s;
+}
+.action-btn:hover { opacity:.8; }
+.btn-locate  { background:rgba(56,189,248,0.15); color:var(--blue);  border:1px solid rgba(56,189,248,0.3); }
+.btn-stop    { background:rgba(239,68,68,0.15);  color:var(--red);   border:1px solid rgba(239,68,68,0.3); }
+.btn-disable { background:rgba(100,116,139,0.2); color:var(--muted); border:1px solid var(--border); }
+
+/* ===== تبويب الإحصائيات ===== */
+#stats-panel { flex-direction:column; overflow-y:auto; padding:16px; gap:12px; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+.stat-card {
+  background:var(--card);
+  border:1px solid var(--border); border-radius:14px;
+  padding:20px 16px; text-align:center;
+}
+.stat-val  { font-size:2rem; font-weight:900; }
+.stat-label{ font-size:.75rem; color:var(--muted); margin-top:4px; }
+
+/* ===== توست ===== */
+#toast {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  background:rgba(10,22,40,0.97); border:1px solid var(--border);
+  border-radius:12px; padding:10px 24px;
+  font-size:.85rem; z-index:9000;
+  opacity:0; transition:opacity .3s; pointer-events:none;
+}
+#toast.show { opacity:1; }
+
+/* ===== تحميل ===== */
+.loading-spinner {
+  display:flex; align-items:center; justify-content:center;
+  flex:1; flex-direction:column; gap:16px; color:var(--muted);
+}
+.spinner {
+  width:36px; height:36px; border-radius:50%;
+  border:3px solid var(--border);
+  border-top-color:var(--gold);
+  animation:spin 1s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+
+<!-- شاشة الدخول -->
+<div id="login-screen">
+  <div class="login-card">
+    <div style="font-size:2.5rem;margin-bottom:12px;">⚓</div>
+    <h1>لوحة تحكم المشرف</h1>
+    <p>أدخل كلمة سر المشرف للدخول</p>
+    <input type="password" id="admin-pass" placeholder="••••••••"
+           onkeypress="if(event.key==='Enter') adminLogin()">
+    <button onclick="adminLogin()">دخول ←</button>
+    <div class="login-error" id="admin-error">كلمة سر غير صحيحة</div>
+  </div>
+</div>
+
+<!-- التطبيق الرئيسي -->
+<div id="app">
+  <header>
+    <div class="header-brand">
+      <div class="header-brand-icon">⚓</div>
+      <div>
+        <div class="header-title">لوحة تحكم المشرف</div>
+        <div class="header-sub">خريطة الصياد البحري</div>
+      </div>
+    </div>
+    <div class="header-time" id="live-time"></div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('map')">🗺️ خريطة القوارب</button>
+    <button class="tab" onclick="switchTab('users')">👥 المستخدمون</button>
+    <button class="tab" onclick="switchTab('stats')">📊 إحصائيات</button>
+  </div>
+
+  <!-- تبويب الخريطة -->
+  <div id="map-panel" class="panel active">
+    <div id="admin-map"></div>
+    <div class="boats-count" id="boats-count">🚢 0 قارب نشط</div>
+    <div class="map-legend">
+      <div class="map-legend-row">🚢 <span>قارب نشط</span></div>
+      <div class="map-legend-row">🆘 <span style="color:var(--red)">نداء طوارئ</span></div>
+      <div class="map-legend-row" style="color:var(--muted);font-size:.68rem;">يتحدث كل 30 ثانية</div>
+    </div>
+  </div>
+
+  <!-- تبويب المستخدمين -->
+  <div id="users-panel" class="panel">
+    <div class="users-toolbar">
+      <input class="search-input" id="search-input" placeholder="🔍 بحث باسم أو كود..."
+             oninput="filterUsers()">
+      <button class="tab" onclick="loadUsers()" style="flex-shrink:0;">🔄 تحديث</button>
+    </div>
+    <div class="users-list" id="users-list">
+      <div class="loading-spinner"><div class="spinner"></div><div>جاري التحميل...</div></div>
+    </div>
+  </div>
+
+  <!-- تبويب الإحصائيات -->
+  <div id="stats-panel" class="panel">
+    <div class="stats-grid" id="stats-grid">
+      <div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// الإعدادات
+// ============================================================
+var API_BASE = 'https://fishing-xbds.onrender.com';
+var API_KEY  = 'fishing123';
+// كلمة سر المشرف — غيّرها!
+var ADMIN_PASS = 'admin2024';
+
+var adminMap    = null;
+var boatsMapLayer = null;
+var allUsers    = [];
+var refreshTimer = null;
+
+// ============================================================
+// تسجيل الدخول
+// ============================================================
+function adminLogin() {
+  var pass = document.getElementById('admin-pass').value;
+  if (pass === ADMIN_PASS) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    initApp();
+  } else {
+    document.getElementById('admin-error').style.display = 'block';
+  }
+}
+
+// ============================================================
+// تهيئة التطبيق
+// ============================================================
+function initApp() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  initMap();
+  loadUsers();
+  loadBoatsMap();
+  setInterval(loadBoatsMap, 30000);
+}
+
+function updateClock() {
+  var now = new Date();
+  document.getElementById('live-time').textContent =
+    now.toLocaleTimeString('ar-DZ') + ' — ' + now.toLocaleDateString('ar-DZ');
+}
+
+// ============================================================
+// تبويبات
+// ============================================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    t.classList.toggle('active', ['map','users','stats'][i] === tab ||
+      t.textContent.includes({'map':'خريطة','users':'مستخد','stats':'إحصاء'}[tab]));
+  });
+  // إصلاح بسيط
+  var tabs = document.querySelectorAll('.tabs .tab');
+  var panels = ['map-panel','users-panel','stats-panel'];
+  var names  = ['map','users','stats'];
+  tabs.forEach(function(t,i){ t.classList.toggle('active', names[i]===tab); });
+  panels.forEach(function(p,i){
+    var el = document.getElementById(p);
+    el.classList.toggle('active', names[i]===tab);
+    el.style.display = names[i]===tab ? 'flex' : 'none';
+  });
+  if (tab === 'stats') loadStats();
+  if (tab === 'map') setTimeout(function(){ adminMap && adminMap.invalidateSize(); }, 100);
+}
+
+// ============================================================
+// الخريطة
+// ============================================================
+function initMap() {
+  adminMap = L.map('admin-map', { zoomControl:true }).setView([36.25, 0.3], 9);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© OpenStreetMap', maxZoom:18
+  }).addTo(adminMap);
+  boatsMapLayer = L.layerGroup().addTo(adminMap);
+}
+
+function loadBoatsMap() {
+  fetch(API_BASE + '/api/admin/boats', { headers:{'x-api-key': API_KEY} })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    boatsMapLayer.clearLayers();
+    var boats = data.boats || [];
+    document.getElementById('boats-count').textContent = '🚢 ' + boats.length + ' قارب نشط';
+    boats.forEach(function(boat) {
+      var isSOS = boat.sos;
+      var emoji = isSOS ? '🆘' : '🚢';
+      var icon = L.divIcon({
+        className: '',
+        html: '<div style="font-size:24px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.8));">' + emoji + '</div>',
+        iconSize:[28,28], iconAnchor:[14,14], popupAnchor:[0,-18]
+      });
+      var marker = L.marker([boat.lat, boat.lon], {icon:icon});
+      var battery = boat.battery ? '🔋 ' + boat.battery + '%' : 'غير معروف';
+      var time    = boat.timestamp ? new Date(boat.timestamp).toLocaleTimeString('ar-DZ') : '--';
+      var sosLine = isSOS ? '<div style="color:#ef4444;font-weight:900;margin-bottom:6px;">🆘 نداء طوارئ!</div>' : '';
+      marker.bindPopup(
+        '<div style="direction:rtl;font-family:Tajawal,sans-serif;min-width:160px;">'
+        + sosLine
+        + '<div style="font-weight:700;font-size:.95rem;margin-bottom:4px;">' + (boat.name||boat.code) + '</div>'
+        + '<div style="color:#888;font-size:.75rem;">🕐 آخر تحديث: ' + time + '</div>'
+        + '<div style="color:#888;font-size:.75rem;">' + battery + '</div>'
+        + '<button onclick="stopBoatFromMap(\'' + boat.code + '\')" style="margin-top:8px;width:100%;padding:6px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#fca5a5;border-radius:6px;cursor:pointer;font-family:Tajawal,sans-serif;font-size:.75rem;">إيقاف التتبع</button>'
+        + '</div>'
+      );
+      boatsMapLayer.addLayer(marker);
+    });
+  })
+  .catch(function(e){ console.warn('boats error', e); });
+}
+
+function stopBoatFromMap(code) {
+  fetch(API_BASE + '/api/tracking/clear/' + code, {
+    method:'DELETE', headers:{'x-api-key': API_KEY}
+  }).then(function(){ toast('تم إيقاف تتبع ' + code); loadBoatsMap(); });
+}
+
+// ============================================================
+// المستخدمون
+// ============================================================
+function loadUsers() {
+  document.getElementById('users-list').innerHTML =
+    '<div class="loading-spinner"><div class="spinner"></div><div>جاري التحميل...</div></div>';
+  fetch(API_BASE + '/api/admin/users', { headers:{'x-api-key': API_KEY} })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    allUsers = data.users || [];
+    renderUsers(allUsers);
+  })
+  .catch(function(){ toast('فشل تحميل المستخدمين'); });
+}
+
+function filterUsers() {
+  var q = document.getElementById('search-input').value.trim().toLowerCase();
+  if (!q) { renderUsers(allUsers); return; }
+  renderUsers(allUsers.filter(function(u){
+    return u.name.toLowerCase().includes(q) || u.code.toLowerCase().includes(q);
+  }));
+}
+
+var PERM_LABELS = {
+  reports:      '🎣 تقارير الصيادين',
+  alerts:       '⚠️ التنبيهات',
+  clarity:      '🔵 شفافية المياه',
+  depth:        '🗺️ الأعماق',
+  routes:       '📍 المسارات',
+  current_deep: '🌊 التيار العميق',
+  surface_temp: '🌡️ حرارة السطح',
+  tracking:     '🚢 التتبع',
+  see_boats:    '📡 رؤية القوارب',
+};
+
+function renderUsers(users) {
+  var list = document.getElementById('users-list');
+  if (!users.length) { list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;">لا يوجد مستخدمون</div>'; return; }
+
+  // القوارب النشطة — SOS أولاً
+  fetch(API_BASE + '/api/admin/boats', { headers:{'x-api-key': API_KEY} })
+  .then(function(r){ return r.json(); })
+  .then(function(boatsData) {
+    var boats = {};
+    (boatsData.boats||[]).forEach(function(b){ boats[b.code.toUpperCase()] = b; });
+
+    list.innerHTML = users.map(function(u) {
+      var boat   = boats[u.code.toUpperCase()] || null;
+      var isSOS  = boat && boat.sos;
+      var online = !!boat;
+      var bat    = boat && boat.battery ? '🔋' + boat.battery + '%' : '';
+      var cards  = Object.keys(PERM_LABELS).map(function(k) {
+        var isTracking = k === 'tracking';
+        var enabled = u.permissions[k];
+        return '<div class="perm-toggle' + (enabled?' enabled':'') + (isTracking?' tracking-perm':'') + '" '
+          + 'onclick="togglePerm(\'' + u.code + '\',\'' + k + '\',' + !enabled + ')">'
+          + '<span>' + PERM_LABELS[k] + '</span>'
+          + '<div class="toggle-dot"></div>'
+          + '</div>';
+      }).join('');
+      return '<div class="user-card' + (isSOS?' sos-active':'') + '" id="card-' + u.code + '">'
+        + '<div class="user-top">'
+        + '  <div class="user-info">'
+        + '    <div class="user-avatar">' + (online ? (isSOS?'🆘':'🚢') : '👤') + '</div>'
+        + '    <div><div class="user-name">' + (u.name||'—') + '</div>'
+        + '      <div class="user-code">' + u.code + (bat?' — '+bat:'') + '</div></div>'
+        + '  </div>'
+        + '  <div class="user-badges">'
+        + (isSOS ? '<span class="badge badge-sos">🆘 SOS</span>' : '')
+        + (online && !isSOS ? '<span class="badge badge-online">📡 متصل</span>' : '')
+        + '<span class="badge ' + (u.active?'badge-active':'badge-inactive') + '">'
+        + (u.active?'نشط':'موقوف') + '</span>'
+        + '  </div>'
+        + '</div>'
+        + '<div class="perms-grid">' + cards + '</div>'
+        + '<div class="user-actions">'
+        + (online ? '<button class="action-btn btn-locate" onclick="locateBoat(' + u.code.replace(/'/g,'') + ')">📍 موقعه</button>' : '')
+        + (online ? '<button class="action-btn btn-stop" onclick="stopBoat(\'' + u.code + '\')">⏹ إيقاف التتبع</button>' : '')
+        + '<button class="action-btn btn-disable" onclick="toggleActive(\'' + u.code + '\',' + !u.active + ')">'
+        + (u.active ? '🚫 تعطيل' : '✅ تفعيل') + '</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  });
+}
+
+function togglePerm(code, perm, value) {
+  fetch(API_BASE + '/api/admin/update-permissions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':API_KEY},
+    body: JSON.stringify({ code:code, permissions:{ [perm]: value } })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function() {
+    toast('تم تحديث صلاحية ' + PERM_LABELS[perm]);
+    loadUsers();
+  })
+  .catch(function(){ toast('فشل التحديث'); });
+}
+
+function toggleActive(code, value) {
+  fetch(API_BASE + '/api/admin/update-permissions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':API_KEY},
+    body: JSON.stringify({ code:code, active: value })
+  })
+  .then(function(){ toast(value ? 'تم تفعيل الحساب' : 'تم تعطيل الحساب'); loadUsers(); });
+}
+
+function stopBoat(code) {
+  fetch(API_BASE + '/api/tracking/clear/' + code, {
+    method:'DELETE', headers:{'x-api-key':API_KEY}
+  }).then(function(){ toast('تم إيقاف تتبع ' + code); loadUsers(); });
+}
+
+function locateBoat(code) {
+  switchTab('map');
+  setTimeout(function(){
+    fetch(API_BASE + '/api/admin/boats', { headers:{'x-api-key':API_KEY} })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var boat = (data.boats||[]).find(function(b){ return b.code === String(code); });
+      if (boat) adminMap.setView([boat.lat, boat.lon], 13);
+    });
+  }, 300);
+}
+
+// ============================================================
+// الإحصائيات
+// ============================================================
+function loadStats() {
+  var grid = document.getElementById('stats-grid');
+  grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div></div>';
+  Promise.all([
+    fetch(API_BASE + '/api/admin/users',  {headers:{'x-api-key':API_KEY}}).then(function(r){return r.json();}),
+    fetch(API_BASE + '/api/admin/boats',  {headers:{'x-api-key':API_KEY}}).then(function(r){return r.json();}),
+    fetch(API_BASE + '/api/admin/daily-points', {headers:{'x-api-key':API_KEY}}).then(function(r){return r.json();})
+  ]).then(function(results) {
+    var users  = results[0].users  || [];
+    var boats  = results[1].boats  || [];
+    var points = results[2].users  || [];
+    var activeUsers   = users.filter(function(u){ return u.active; }).length;
+    var trackingUsers = users.filter(function(u){ return u.permissions && u.permissions.tracking; }).length;
+    var sosBoats      = boats.filter(function(b){ return b.sos; }).length;
+    var totalPoints   = points.reduce(function(a,u){ return a + (u.points||0); }, 0);
+    grid.innerHTML = [
+      stat(users.length,     '👥', 'إجمالي المستخدمين', '#f59e0b'),
+      stat(activeUsers,      '✅', 'حسابات نشطة',       '#06d6a0'),
+      stat(boats.length,     '🚢', 'قوارب نشطة الآن',   '#38bdf8'),
+      stat(trackingUsers,    '📡', 'لهم صلاحية تتبع',   '#8b5cf6'),
+      stat(sosBoats,         '🆘', 'نداءات SOS',        '#ef4444'),
+      stat(totalPoints,      '📊', 'تقارير اليوم',      '#f97316'),
+    ].join('');
+  });
+}
+
+function stat(val, icon, label, color) {
+  return '<div class="stat-card">'
+    + '<div class="stat-val" style="color:' + color + '">' + icon + ' ' + val + '</div>'
+    + '<div class="stat-label">' + label + '</div>'
+    + '</div>';
+}
+
+// ============================================================
+// مساعد Toast
+// ============================================================
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 3000);
+}
+</script>
+</body>
+</html>
