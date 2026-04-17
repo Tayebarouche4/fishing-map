@@ -2,6 +2,7 @@
 "type": "FeatureCollection",
 "name": "rout",
 "features": [
+{ "type": "Feature", "properties": { "strength": 1.0, "type": null, "temp_c": null }, "geometry": { "type": "LineString", "coordinates": [ [ 0.0702927, 36.0495596 ], [ 0.0536766, 36.0436253 ], [ 0.0400277, 36.0359107 ], [ 0.037654, 36.0228552 ], [ 0.0364671, 36.0127668 ], [ 0.0465554, 36.0068325 ], [ 0.0578306, 36.0044588 ] ] } },
 { "type": "Feature", "properties": { "strength": 0.615, "type": "قوي", "temp_c": 17.3 }, "geometry": { "type": "LineString", "coordinates": [ [ -0.1499987, 35.7958336 ], [ -0.1541653, 35.8000011 ] ] } },
 { "type": "Feature", "properties": { "strength": 0.685, "type": "قوي", "temp_c": 17.3 }, "geometry": { "type": "LineString", "coordinates": [ [ -0.1416655, 35.7958336 ], [ -0.1458321, 35.8000011 ] ] } },
 { "type": "Feature", "properties": { "strength": 0.725, "type": "قوي", "temp_c": 17.3 }, "geometry": { "type": "LineString", "coordinates": [ [ -0.1333323, 35.7958336 ], [ -0.1374989, 35.8000011 ] ] } },
