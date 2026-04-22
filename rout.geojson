@@ -2,6 +2,7 @@
 "type": "FeatureCollection",
 "name": "rout",
 "features": [
+{ "type": "Feature", "properties": { "strength": null, "type": null, "temp_c": null }, "geometry": { "type": "LineString", "coordinates": [ [ 0.2199633, 36.1274936 ], [ 0.1980515, 36.133986 ], [ 0.1793859, 36.133986 ], [ 0.1599088, 36.1201897 ], [ 0.1428663, 36.1169435 ], [ 0.1266354, 36.1120742 ], [ 0.1152737, 36.1136973 ], [ 0.1047236, 36.1185666 ], [ 0.1047236, 36.1185666 ], [ 0.0917389, 36.1210012 ], [ 0.0787541, 36.116132 ], [ 0.0633347, 36.1096396 ] ] } },
 { "type": "Feature", "properties": { "strength": 0.605, "type": "قوي", "temp_c": 17.6 }, "geometry": { "type": "LineString", "coordinates": [ [ -0.1083307, 35.7791672 ], [ -0.1124973, 35.7833347 ] ] } },
 { "type": "Feature", "properties": { "strength": 0.768, "type": "قوي", "temp_c": 17.6 }, "geometry": { "type": "LineString", "coordinates": [ [ -0.124999, 35.7875023 ], [ -0.1291656, 35.7916679 ] ] } },
 { "type": "Feature", "properties": { "strength": 0.908, "type": "قوي", "temp_c": 17.6 }, "geometry": { "type": "LineString", "coordinates": [ [ -0.1166649, 35.7875023 ], [ -0.1208324, 35.7916679 ] ] } },
