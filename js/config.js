@@ -4,7 +4,7 @@
 
 // إعدادات API السيرفر
 var API_BASE_URL = "https://fishing-xbds.onrender.com";
-var API_KEY      = "fishing123";
+var API_KEY      = "fishing2026";
 var SHEET_URL    = API_BASE_URL; // للتوافق مع الكود القديم
 
 // إعدادات الطقس والموقع
