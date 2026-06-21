@@ -6,6 +6,7 @@
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5908748, 36.337297 ], [ 0.5702341, 36.317803 ], [ 0.5622072, 36.2983091 ], [ 0.5748209, 36.2902821 ], [ 0.5748209, 36.2902821 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5461533, 36.3235365 ], [ 0.5323929, 36.3189497 ], [ 0.5117522, 36.3086294 ], [ 0.5002852, 36.3006025 ], [ 0.5002852, 36.2994558 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3017354, 36.2416792 ], [ 0.2640939, 36.1971037 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5067826, 36.2793207 ], [ 0.5176788, 36.2723868 ] ] ] } }
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5067826, 36.2793207 ], [ 0.5176788, 36.2723868 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.2512165, 36.1901698 ], [ 0.2353675, 36.1753113 ], [ 0.2195184, 36.1663962 ], [ 0.2086222, 36.1683773 ], [ 0.1967354, 36.1763019 ], [ 0.1967354, 36.1763019 ] ] ] } }
 ]
 }
