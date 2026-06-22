@@ -3,11 +3,7 @@
 "name": "rout",
 "features": [
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.299898, 36.2399542 ], [ 0.2982889, 36.2394179 ], [ 0.2891706, 36.2286905 ], [ 0.2768342, 36.2158177 ], [ 0.2720069, 36.2050903 ], [ 0.2655704, 36.1975811 ], [ 0.2607431, 36.1889993 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4441811, 36.2555089 ], [ 0.4264809, 36.2544362 ], [ 0.4157536, 36.2506816 ], [ 0.4071717, 36.2442452 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.56804, 36.3415265 ], [ 0.5307497, 36.3083227 ], [ 0.5833648, 36.3073011 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3989563, 36.2373178 ], [ 0.3948697, 36.2347636 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3856748, 36.2281229 ], [ 0.382099, 36.2265904 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5099414, 36.3007099 ], [ 0.5029914, 36.2988566 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.6482886, 36.3406227 ], [ 0.6257662, 36.3293614 ] ] ] } }
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4391231, 36.3106048 ], [ 0.4391231, 36.3106048 ], [ 0.4239522, 36.2872163 ], [ 0.4132062, 36.2707812 ], [ 0.4062529, 36.2581388 ], [ 0.3961389, 36.2442321 ], [ 0.3834965, 36.2334861 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5469899, 36.2851387 ], [ 0.5245694, 36.2892992 ], [ 0.5150926, 36.2957711 ], [ 0.5150926, 36.2957711 ], [ 0.5076962, 36.2999316 ], [ 0.5005308, 36.3010873 ] ] ] } }
 ]
 }
