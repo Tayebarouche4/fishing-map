@@ -2,13 +2,9 @@
 "type": "FeatureCollection",
 "name": "rout",
 "features": [
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.1402445, 36.0941902 ], [ 0.1261683, 36.0764097 ], [ 0.1135737, 36.0615926 ], [ 0.0943115, 36.0586292 ], [ 0.0728267, 36.0601109 ], [ 0.0624547, 36.064556 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.1135737, 36.0430712 ], [ 0.0957932, 36.0304767 ], [ 0.0898664, 36.0178821 ], [ 0.0883846, 36.0075101 ], [ 0.0883846, 35.9941747 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.1750647, 36.0882634 ], [ 0.1617293, 36.1015988 ], [ 0.1632111, 36.1171568 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.383986, 36.2734773 ], [ 0.3669463, 36.2564376 ], [ 0.3676872, 36.2438431 ], [ 0.3632421, 36.2334711 ], [ 0.3639829, 36.2260625 ], [ 0.3721323, 36.2179131 ], [ 0.3743549, 36.2179131 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3150865, 36.1830929 ], [ 0.2980468, 36.1756844 ], [ 0.2847114, 36.1697575 ], [ 0.2698943, 36.1660532 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.2550771, 36.1601264 ], [ 0.2447052, 36.1475318 ] ] ] } },
-{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.2017355, 36.136419 ], [ 0.1809916, 36.1327147 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4758026, 36.2788882 ], [ 0.4596228, 36.2761145 ], [ 0.4415939, 36.2761145 ], [ 0.4231028, 36.2788882 ], [ 0.4110835, 36.283511 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5160209, 36.3098609 ], [ 0.5067753, 36.2992285 ], [ 0.4961429, 36.2853601 ], [ 0.4882841, 36.2848978 ], [ 0.4882841, 36.2848978 ] ] ] } },
 { "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5298893, 36.3020022 ], [ 0.5345121, 36.2909075 ], [ 0.5345121, 36.2909075 ], [ 0.540984, 36.2876715 ] ] ] } }
