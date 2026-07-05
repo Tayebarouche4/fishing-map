@@ -2,6 +2,8 @@
 "type": "FeatureCollection",
 "name": "rout",
 "features": [
-{ "type": "Feature", "properties": { "id": "20260705000000_20260706000000_9mJIt", "Name": "20260705000000_20260706000000_9mJIt", "description": null, "timestamp": null, "begin": "2026-07-05T00:00:00Z", "end": "2026-07-06T00:00:00Z", "altitudeMode": null, "tessellate": 1, "extrude": 0, "visibility": -1, "drawOrder": null, "icon": null }, "geometry": { "type": "LineString", "coordinates": [ [ 0.0899, 35.92 ], [ 0.0898, 35.92 ], [ 0.0895, 35.92 ], [ 0.0893, 35.9201 ], [ 0.089, 35.9202 ], [ 0.0887, 35.9204 ], [ 0.0886, 35.9204 ], [ 0.0887, 35.9205 ], [ 0.0887, 35.9205 ], [ 0.0887, 35.9207 ], [ 0.0888, 35.9209 ], [ 0.0888, 35.9209 ], [ 0.0888, 35.921 ], [ 0.0889, 35.9213 ], [ 0.0893, 35.9212 ], [ 0.0897, 35.921 ], [ 0.09, 35.9209 ], [ 0.0899, 35.9206 ], [ 0.089, 35.9209 ] ] } }
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3015594, 36.2139925 ], [ 0.2927848, 36.2220921 ], [ 0.2921099, 36.2342414 ], [ 0.308309, 36.2382912 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3481318, 36.2686645 ], [ 0.3393573, 36.2659647 ], [ 0.3319327, 36.2571901 ], [ 0.327208, 36.2517904 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4449891, 36.2939757 ], [ 0.4308148, 36.2909383 ], [ 0.4223778, 36.2841887 ], [ 0.4149532, 36.2841887 ] ] ] } }
 ]
 }
