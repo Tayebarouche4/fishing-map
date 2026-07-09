@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "rout",
+"features": [
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.353372, 36.2423074 ], [ 0.3819788, 36.2363887 ], [ 0.402694, 36.2275108 ], [ 0.4056533, 36.2225786 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3070093, 36.1979176 ], [ 0.2991178, 36.1880532 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3173669, 36.2013701 ], [ 0.3015839, 36.1998904 ], [ 0.2981313, 36.1934786 ], [ 0.3005974, 36.1855871 ], [ 0.3005974, 36.1801616 ], [ 0.299611, 36.1776955 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.1906093, 36.1939718 ], [ 0.2068856, 36.1910125 ], [ 0.2261212, 36.1850938 ], [ 0.2330263, 36.1791752 ], [ 0.2409178, 36.1737498 ], [ 0.250289, 36.1643786 ], [ 0.2581805, 36.1574735 ], [ 0.2596602, 36.1564871 ], [ 0.2631127, 36.1545142 ], [ 0.2695246, 36.1525413 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4396855, 36.243787 ], [ 0.427355, 36.2403345 ], [ 0.42045, 36.236882 ] ] ] } }
+]
+}
