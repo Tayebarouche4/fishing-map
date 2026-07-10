@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "نقطة 1"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.22465,
+          36.1388
+        ]
+      }
+    }
+  ]
+}
