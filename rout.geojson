@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "rout",
+"features": [
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.5639005, 36.3500257 ], [ 0.5639005, 36.3495639 ], [ 0.5708285, 36.332013 ], [ 0.5712904, 36.3163096 ], [ 0.5712904, 36.3163096 ], [ 0.5731378, 36.3038393 ], [ 0.5685192, 36.2969113 ] ] ] } }
+]
+}
