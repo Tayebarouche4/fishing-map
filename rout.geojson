@@ -1,0 +1,12 @@
+{
+"type": "FeatureCollection",
+"name": "rout",
+"features": [
+{ "type": "Feature", "properties": { "date": null, "time": null, "code": null, "lat": null, "lon": null, "rating": null, "boxes": null, "type": null }, "geometry": { "type": "Point", "coordinates": [ 0.4296168, 36.2715741 ] } },
+{ "type": "Feature", "properties": { "date": null, "time": null, "code": null, "lat": null, "lon": null, "rating": null, "boxes": null, "type": null }, "geometry": { "type": "Point", "coordinates": [ 0.4233824, 36.2570272 ] } },
+{ "type": "Feature", "properties": { "date": null, "time": null, "code": null, "lat": null, "lon": null, "rating": null, "boxes": null, "type": null }, "geometry": { "type": "Point", "coordinates": [ 0.329139, 36.2087415 ] } },
+{ "type": "Feature", "properties": { "date": null, "time": null, "code": null, "lat": null, "lon": null, "rating": null, "boxes": null, "type": null }, "geometry": { "type": "Point", "coordinates": [ 0.3184061, 36.1984137 ] } },
+{ "type": "Feature", "properties": { "date": null, "time": null, "code": null, "lat": null, "lon": null, "rating": null, "boxes": null, "type": null }, "geometry": { "type": "Point", "coordinates": [ 0.4545516, 36.2855819 ] } },
+{ "type": "Feature", "properties": { "date": null, "time": null, "code": null, "lat": null, "lon": null, "rating": null, "boxes": null, "type": null }, "geometry": { "type": "Point", "coordinates": [ 0.2827874, 36.1721596 ] } }
+]
+}
