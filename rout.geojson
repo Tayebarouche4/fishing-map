@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "rout",
+"features": [
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4198048, 36.2662565 ], [ 0.4099506, 36.2549945 ], [ 0.4043196, 36.2416209 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4071351, 36.2345822 ], [ 0.4071351, 36.2345822 ], [ 0.4113583, 36.2254318 ], [ 0.4113583, 36.2254318 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.4261397, 36.2437325 ], [ 0.4261397, 36.2381016 ] ] ] } },
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 0.3085926, 36.2099466 ], [ 0.3036655, 36.1993885 ] ] ] } }
+]
+}
