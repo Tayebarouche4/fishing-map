@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "rout",
+"features": [
+{ "type": "Feature", "properties": { "id": null, "Name": "Map", "description": null, "timestamp": null, "begin": null, "end": null, "altitudeMode": null, "tessellate": null, "extrude": null, "visibility": -1, "drawOrder": 0, "icon": "image.png" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.125135, 36.1391344, 0.0 ], [ 0.0427376, 36.1391344, 0.0 ], [ 0.0427376, 36.0704698, 0.0 ], [ 0.125135, 36.0704698, 0.0 ], [ 0.125135, 36.1391344, 0.0 ] ] ] } }
+]
+}
