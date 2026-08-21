@@ -2,6 +2,8 @@
 "type": "FeatureCollection",
 "name": "rout",
 "features": [
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.5077372,36.2763258],[0.4999108,36.2877643],[0.4887734,36.2883663],[0.4785389,36.2874632],[0.4686055,36.2859582],[0.4655954,36.2841521]]]}}
+{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.5077372,36.2763258],[0.4999108,36.2877643],[0.4887734,36.2883663],[0.4785389,36.2874632],[0.4686055,36.2859582],[0.4655954,36.2841521]]]}},
+{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.5811661,36.3185074],[0.5647055,36.3156693],[0.553921,36.3088581],[0.5499478,36.2986412]]]}},
+{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.5760576,36.3332651],[0.5584619,36.3326975],[0.5448394,36.327589],[0.5397309,36.3168045],[0.5385957,36.3060201]]]}}
 ]
 }
