@@ -2,8 +2,8 @@ name: SST Daily Pipeline
 
 on:
   schedule:
-    # 13:40 UTC = 14:40 بتوقيت الجزائر (UTC+1)
-    - cron: '40 13 * * *'
+    # 14:00 UTC = 15:00 بتوقيت الجزائر (UTC+1)
+    - cron: '00 14 * * *'
   workflow_dispatch:   # يسمح بتشغيل يدوي من تبويب Actions للتجربة
 
 permissions:
