@@ -16,6 +16,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -32,6 +33,12 @@ SST_DATASET = {
     "variable":   ["analysed_sst"],
 }
 
+# إعادة المحاولة لو بيانات اليوم لسا ما نُشرت — بيانات SST تتوفر عادة من الساعة
+# 12:00 ظهرًا بتوقيت الجزائر (11:00 UTC)، وقد تتأخر أحيانًا حتى 17:00 (16:00 UTC).
+# 11 محاولة كل 30 دقيقة = 5 ساعات تغطية، تبدأ من موعد التشغيلة نفسه.
+RETRY_ATTEMPTS = 11
+RETRY_INTERVAL_SEC = 30 * 60
+
 
 def download_sst_nc(date_str, out_path):
     username = os.environ.get("CMEMS_USERNAME")
@@ -40,24 +47,43 @@ def download_sst_nc(date_str, out_path):
         raise RuntimeError("متغيرات البيئة CMEMS_USERNAME / CMEMS_PASSWORD غير موجودة")
 
     import copernicusmarine as cm
-    cm.subset(
-        dataset_id        = SST_DATASET["dataset_id"],
-        variables         = SST_DATASET["variable"],
-        minimum_longitude = LON_MIN,
-        maximum_longitude = LON_MAX,
-        minimum_latitude  = LAT_MIN,
-        maximum_latitude  = LAT_MAX,
-        start_datetime    = date_str + "T00:00:00",
-        end_datetime      = date_str + "T00:00:00",
-        output_filename   = os.path.basename(out_path),
-        output_directory  = os.path.dirname(out_path),
-        username          = username,
-        password          = password,
-    )
+
+    last_error = None
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        print("محاولة تحميل sst.nc [" + str(attempt) + "/" + str(RETRY_ATTEMPTS) + "] ...")
+        try:
+            cm.subset(
+                dataset_id        = SST_DATASET["dataset_id"],
+                variables         = SST_DATASET["variable"],
+                minimum_longitude = LON_MIN,
+                maximum_longitude = LON_MAX,
+                minimum_latitude  = LAT_MIN,
+                maximum_latitude  = LAT_MAX,
+                start_datetime    = date_str + "T00:00:00",
+                end_datetime      = date_str + "T00:00:00",
+                output_filename   = os.path.basename(out_path),
+                output_directory  = os.path.dirname(out_path),
+                username          = username,
+                password          = password,
+            )
+            if os.path.exists(out_path):
+                return  # نجح
+        except Exception as e:
+            last_error = e
+            print("  فشلت المحاولة: " + str(e))
+
+        if attempt < RETRY_ATTEMPTS:
+            print("  البيانات غير متوفرة بعد، إعادة المحاولة بعد " +
+                  str(RETRY_INTERVAL_SEC // 60) + " دقيقة...")
+            time.sleep(RETRY_INTERVAL_SEC)
+
+    raise RuntimeError("فشل تحميل sst.nc بعد " + str(RETRY_ATTEMPTS) + " محاولات. آخر خطأ: " + str(last_error))
 
 
 def main():
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    # يقبل تاريخ محدد اختياريًا كمعامل سطر أوامر — مفيد للتجربة اليدوية على تاريخ
+    # معروف إنه متوفر، بدل انتظار نشر بيانات اليوم. بدون معامل = تاريخ اليوم.
+    date_str = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y-%m-%d")
     print("===== خط أنابيب SST السحابي لتاريخ " + date_str + " =====")
 
     with tempfile.TemporaryDirectory() as tmp:
