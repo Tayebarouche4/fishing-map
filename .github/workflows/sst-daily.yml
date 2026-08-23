@@ -1,0 +1,40 @@
+name: SST Daily Pipeline
+
+on:
+  schedule:
+    # 6:00 صباحًا UTC يوميًا — عدّل الساعة حسب وقت نشر بيانات CMEMS المعتاد عندك
+    - cron: '0 6 * * *'
+  workflow_dispatch:   # يسمح بتشغيل يدوي من تبويب Actions للتجربة
+
+permissions:
+  contents: write   # لازم عشان الخطوة الأخيرة تقدر تسوي commit/push
+
+jobs:
+  run-sst-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install xarray netCDF4 numpy Pillow scikit-image copernicusmarine
+
+      - name: Run SST pipeline
+        env:
+          CMEMS_USERNAME: ${{ secrets.CMEMS_USERNAME }}
+          CMEMS_PASSWORD: ${{ secrets.CMEMS_PASSWORD }}
+        run: python scripts/ci_sst_pipeline.py
+
+      - name: Commit and push results
+        run: |
+          git config user.name "sst-auto-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add tiles/ tcont.geojson version.json
+          git diff --cached --quiet && echo "لا يوجد تغييرات جديدة" || git commit -m "تحديث تلقائي سحابي لبيانات الحرارة $(date +%F)"
+          git push
