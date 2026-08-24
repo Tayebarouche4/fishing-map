@@ -14,6 +14,7 @@ current-50 (أعماق، عمق ~50م): current50.geojson للساعة الحا�
 
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -39,6 +40,22 @@ LAYERS = {
 
 RETRY_ATTEMPTS = 3
 RETRY_INTERVAL_SEC = 5 * 60
+
+
+def cleanup_keep_only_current(folder, keep_filenames):
+    """يحذف كل ملفات .geojson في folder ما عدا الأسماء المذكورة في keep_filenames."""
+    if not folder.exists():
+        return
+    deleted = 0
+    for f in folder.glob("*.geojson"):
+        if f.name not in keep_filenames:
+            print("حذف ملف قديم: " + f.name)
+            f.unlink()
+            deleted += 1
+    if deleted:
+        print("تم حذف " + str(deleted) + " ملف/ملفات قديمة — أُبقي فقط على: " + ", ".join(sorted(keep_filenames)))
+    else:
+        print("لا يوجد ملفات قديمة تحتاج حذف")
 
 
 def download_nc(layer_key, target_datetime, out_path):
@@ -133,6 +150,11 @@ def main():
         out50 = REPO_ROOT / "current50.geojson"
         count50 = process_layer(nc50_now, out50)
         print("current50 (الساعة الحالية): " + str(count50) + " سهم")
+
+    # تنظيف تلقائي: يمسح كل الأرشيف القديم، يبقي فقط ملف "الآن" وملف "التوقّع" الحاليين
+    current1_folder = REPO_ROOT / "currents" / "current1"
+    keep_names = {today_ddmmyyyy + ".geojson", forecast_dt.strftime("%d-%m-%Y") + "_forecast12h.geojson"}
+    cleanup_keep_only_current(current1_folder, keep_names)
 
     # تحديث version.json
     v = datetime.now().strftime("%Y-%m-%d-%H%M")
