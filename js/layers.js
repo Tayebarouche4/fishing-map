@@ -145,7 +145,7 @@ function getCurrent1HistoryPanel() {
     panel = document.createElement('div');
     panel.id = 'current1-history-panel';
     panel.style.cssText = [
-      'position:fixed', 'bottom:150px', 'left:16px', 'z-index:1060',
+      'position:fixed', 'bottom:20px', 'left:16px', 'z-index:1060',
       'background:rgba(6,13,24,0.97)', 'border:1px solid rgba(239,68,68,0.35)',
       'border-radius:12px', 'padding:8px', 'font-family:Tajawal,sans-serif',
       'font-size:.75rem', 'color:#e2e8f0', 'direction:rtl', 'min-width:180px',
@@ -235,7 +235,6 @@ function finishCurrent1Load(entry, hourLabel) {
     current1Btn.style.background  = 'rgba(239,68,68,0.25)';
     current1Btn.style.borderColor = '#ef4444';
   }
-  showCurrent1Legend(hourLabel);
 }
 
 function hideCurrent1Layer() {
@@ -245,7 +244,6 @@ function hideCurrent1Layer() {
     current1Btn.style.background  = 'rgba(239,68,68,0.1)';
     current1Btn.style.borderColor = 'rgba(239,68,68,0.3)';
   }
-  hideCurrent1Legend();
   closeCurrent1Slider();
 }
 
@@ -639,55 +637,4 @@ function toggleBathyWrecks(btn) {
     attribution:'© EMODnet / OceanWise UKHO'
   });
   bathyWrecksLayer.addTo(map); btn.classList.add('active');
-}
-
-// ============================================================
-// Legend تيار السطح — يبقى ظاهراً طالما الطبقة مفعّلة
-// ============================================================
-function showCurrent1Legend(dateLabel) {
-  // احذف القديم إن وُجد وأنشئ جديداً دائماً
-  hideCurrent1Legend();
-
-  var el = document.createElement('div');
-  el.id = 'current1-legend';
-  el.style.cssText = [
-    'position:fixed',
-    'bottom:90px',
-    'left:16px',
-    'z-index:1050',
-    'background:rgba(6,13,24,0.92)',
-    'border:1px solid rgba(255,255,255,0.15)',
-    'border-radius:12px',
-    'padding:10px 14px',
-    'font-family:Tajawal,sans-serif',
-    'font-size:0.75rem',
-    'color:#e2e8f0',
-    'direction:rtl',
-    'min-width:160px',
-    'box-shadow:0 4px 16px rgba(0,0,0,0.5)',
-    'pointer-events:none'
-  ].join(';');
-
-  el.innerHTML = [
-    '<div style="font-weight:700;margin-bottom:8px;font-size:.8rem;color:#fff;">🌊 تيار السطح (م/ث)' + (dateLabel ? ' — ' + dateLabel : '') + '</div>',
-    _c1LegendRow('#ffffff', 'ضعيف   < 0.15'),
-    _c1LegendRow('#facc15', 'متوسط  0.15 – 0.35'),
-    _c1LegendRow('#f97316', 'قوي    0.35 – 0.50'),
-    _c1LegendRow('#dc2626', 'شديد   > 0.50')
-  ].join('');
-
-  document.body.appendChild(el);
-}
-
-function hideCurrent1Legend() {
-  var el = document.getElementById('current1-legend');
-  if (el) el.parentNode.removeChild(el);
-}
-
-function _c1LegendRow(color, label) {
-  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-    + '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;'
-    + 'background:' + color + ';flex-shrink:0;'
-    + 'border:1px solid rgba(255,255,255,0.3);"></span>'
-    + '<span style="color:#cbd5e1;">' + label + '</span></div>';
 }
