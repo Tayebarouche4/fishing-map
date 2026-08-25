@@ -5,8 +5,13 @@ ci_currents_pipeline.py
 Actions كل 6 ساعات — كل تشغيلة تجيب أقرب لقطة ساعية لوقت التشغيل الفعلي،
 عشان تكون أقرب ما يمكن للتوقّع الحقيقي.
 
-current-1 (سطح، عمق ~1م): current1.geojson لليوم الحالي + توقّع +24 ساعة.
+current-1 (سطح، عمق ~1م): 5 ملفات في currents/current1/ — الآن ثم كل 3 ساعات
+حتى +12 ساعة، كل ملف باسم يحمل توقيته الفعلي بصيغة UTC
+(current1_YYYY-MM-DD_HHh00Z.geojson) لضمان قراءة موثوقة من الواجهة.
 current-50 (أعماق، عمق ~50م): current50.geojson للساعة الحالية فقط، مسار ثابت.
+
+ملاحظة: يُفترض تشغيل هذا السكربت كل 3 ساعات (بدل 6) عبر cron الـ workflow،
+حتى تبقى محطة "الآن" فعليًا قريبة من اللحظة الراهنة وليس متأخرة لساعات.
 
 بيانات اعتماد CMEMS من متغيرات البيئة CMEMS_USERNAME / CMEMS_PASSWORD.
 الـ commit/push تسويه خطوة الـ workflow — git يتخطى تلقائيًا لو ما فيه تغيير.
@@ -113,36 +118,44 @@ def process_layer(nc_path, out_geojson_path):
     return count
 
 
+# محطات توقّع تيار السطح: الآن ثم كل 3 ساعات حتى +12 ساعة (5 محطات)
+FORECAST_OFFSETS_HOURS = [0, 3, 6, 9, 12]
+
+
+def current1_filename(step_dt):
+    """اسم موحّد يحمل التوقيت UTC الفعلي داخل الاسم نفسه (وليس مجرد +Nh نسبي)،
+    حتى تقرأ الواجهة الساعة الحقيقية للبيانات مباشرة من اسم الملف — هذا يرفع
+    الموثوقية لأن العرض لا يعتمد على افتراض "الملف رقم كذا = الآن + كذا ساعة"،
+    بل على الوقت المكتوب صراحة في الاسم."""
+    return "current1_" + step_dt.strftime("%Y-%m-%d_%Hh00Z") + ".geojson"
+
+
 def main():
     now = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
-    forecast_dt = now + timedelta(hours=12)
-
-    today_ddmmyyyy = now.strftime("%d-%m-%Y")
 
     print("===== خط أنابيب التيارات الساعي — تشغيلة " + now.strftime("%Y-%m-%d %H:00") + " UTC =====")
 
-    with tempfile.TemporaryDirectory() as tmp:
-        # ===== current-1 (سطح): أقرب ساعة لوقت التشغيل — بتاريخ اليوم كالمعتاد =====
-        nc1_now = os.path.join(tmp, "current-1_now.nc")
-        download_nc("current-1", now, nc1_now)
-        out1_today = REPO_ROOT / "currents" / "current1" / (today_ddmmyyyy + ".geojson")
-        out1_today.parent.mkdir(parents=True, exist_ok=True)
-        count1 = process_layer(nc1_now, out1_today)
-        print("current1 (الساعة الحالية): " + str(count1) + " سهم")
+    keep_names = set()
 
-        # ===== current-1 (سطح): توقّع بعد 12 ساعة — داخل نفس مجلد current1/
-        # عشان يظهر تلقائيًا في قائمة الملفات اللي يعرضها الموقع، بس بلاحقة
-        # "_forecast12h" تميّزه عن ملف الحالة الآنية وتمنع أي تصادم بالاسم حتى
-        # لو التوقع وقع بنفس اليوم التقويمي. لا يوقف التشغيلة لو فشل.
-        try:
-            nc1_fcst = os.path.join(tmp, "current-1_forecast.nc")
-            download_nc("current-1", forecast_dt, nc1_fcst)
-            forecast_name = forecast_dt.strftime("%d-%m-%Y") + "_forecast12h.geojson"
-            out1_forecast = REPO_ROOT / "currents" / "current1" / forecast_name
-            count1_fcst = process_layer(nc1_fcst, out1_forecast)
-            print("current1 (توقّع +12 ساعة): " + str(count1_fcst) + " سهم")
-        except Exception as e:
-            print("تحذير: فشل توقّع +12 ساعة لتيار السطح، يُتخطى: " + str(e))
+    with tempfile.TemporaryDirectory() as tmp:
+        # ===== current-1 (سطح): 5 محطات — الآن ثم +3/+6/+9/+12 ساعة =====
+        # كل محطة تُحفظ في ملف مستقل باسم يحمل توقيتها الفعلي (UTC). فشل محطة
+        # واحدة لا يوقف بقية المحطات ولا التشغيلة كاملة.
+        current1_folder = REPO_ROOT / "currents" / "current1"
+        current1_folder.mkdir(parents=True, exist_ok=True)
+
+        for offset in FORECAST_OFFSETS_HOURS:
+            step_dt = now + timedelta(hours=offset)
+            filename = current1_filename(step_dt)
+            keep_names.add(filename)
+            try:
+                nc1_step = os.path.join(tmp, "current-1_+%02dh.nc" % offset)
+                download_nc("current-1", step_dt, nc1_step)
+                out1_step = current1_folder / filename
+                count1 = process_layer(nc1_step, out1_step)
+                print("current1 (+" + str(offset) + "h، " + step_dt.strftime("%H:00") + " UTC): " + str(count1) + " سهم")
+            except Exception as e:
+                print("تحذير: فشلت محطة +" + str(offset) + "h لتيار السطح، تُتخطى: " + str(e))
 
         # ===== current-50 (أعماق): أقرب ساعة لوقت التشغيل، مسار ثابت =====
         nc50_now = os.path.join(tmp, "current-50_now.nc")
@@ -151,16 +164,17 @@ def main():
         count50 = process_layer(nc50_now, out50)
         print("current50 (الساعة الحالية): " + str(count50) + " سهم")
 
-    # تنظيف تلقائي: يمسح كل الأرشيف القديم، يبقي فقط ملف "الآن" وملف "التوقّع" الحاليين
-    current1_folder = REPO_ROOT / "currents" / "current1"
-    keep_names = {today_ddmmyyyy + ".geojson", forecast_dt.strftime("%d-%m-%Y") + "_forecast12h.geojson"}
+    # تنظيف تلقائي: يمسح كل الأرشيف القديم، يبقي فقط محطات هذه التشغيلة الخمس
     cleanup_keep_only_current(current1_folder, keep_names)
 
     # تحديث version.json
     v = datetime.now().strftime("%Y-%m-%d-%H%M")
     version_path = REPO_ROOT / "version.json"
     version_path.write_text(
-        json.dumps({"v": v, "msg": "تحديث تلقائي سحابي (ساعي) لبيانات التيارات"}, ensure_ascii=False),
+        json.dumps(
+            {"v": v, "msg": "تحديث تلقائي كل 3 ساعات — توقّع تيار السطح حتى +12 ساعة (5 محطات)"},
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
 
