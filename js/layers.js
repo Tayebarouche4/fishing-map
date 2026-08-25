@@ -56,31 +56,50 @@ var sshGeojsonLayer    = null, sshGeojsonVisible = false;
 var tcontLayer         = null, tcontVisible = false;
 var sstnOverlay        = null, sstnVisible = false;
 
-// أرشيف تيار السطح (1م) — يُعرض عبر قائمة تاريخية بدل تحميل ملف واحد ثابت
+// أرشيف تيار السطح (1م) — يُعرض عبر شريط تمرير زمني (الآن ← +12 ساعة، كل 3 ساعات)
 var CURRENTS_REPO_OWNER     = 'Tayebarouche4';
 var CURRENTS_REPO_NAME      = 'fishing-map';
 var CURRENT1_HISTORY_FOLDER = 'currents/current1';
 
-var current1LayerCache  = {};     // filename -> L.GeoJSON (مُحمّل مسبقاً، غير مضاف بالضرورة للخريطة)
-var current1HistoryList = null;   // قائمة {name, date, download_url} مُخزّنة بعد أول جلب
-var current1HistoryOpen = false;
-var current1SuppressAutoClose = false;
-var current1ActiveFile  = null;   // اسم الملف المعروض حالياً على الخريطة
-var current1Btn         = null;
+// صيغة اسم الملف من خط الأنابيب: current1_YYYY-MM-DD_HHh00Z.geojson
+// الساعة داخل الاسم هي توقيت UTC الفعلي للبيانات — القراءة تعتمد عليها مباشرة
+// (لا على ترتيب افتراضي) لضمان عرض الساعة الصحيحة دائمًا حتى لو تغيّر عدد
+// المحطات أو تأخرت إحداها.
+var CURRENT1_FILENAME_RE = /^current1_(\d{4})-(\d{2})-(\d{2})_(\d{2})h00Z\.geojson$/i;
+
+var current1LayerCache   = {};     // filename -> L.GeoJSON (مُحمّل مسبقاً، غير مضاف بالضرورة للخريطة)
+var current1TimeSteps    = null;   // [{name, utcDate, download_url}] مرتبة تصاعديًا حسب الوقت
+var current1SliderOpen   = false;
+var current1ActiveIndex  = null;   // index المحطة المعروضة حالياً على الخريطة
+var current1Btn          = null;
 
 function toggleCurrent1(btn) {
   current1Btn = btn;
-  if (current1HistoryOpen) { closeCurrent1History(); return; }
-  openCurrent1History(btn);
+  if (current1SliderOpen) { closeCurrent1Slider(); return; }
+  openCurrent1Slider(btn);
 }
 
-function openCurrent1History(btn) {
+function parseCurrent1UtcDate(filename) {
+  var m = filename.match(CURRENT1_FILENAME_RE);
+  if (!m) return null;
+  var iso = m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':00:00Z';
+  var d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// عرض الساعة بتوقيت الجزائر (UTC+1 ثابت، بدون توقيت صيفي)
+function formatLocalHour(utcDate) {
+  var local = new Date(utcDate.getTime() + 60 * 60 * 1000);
+  return String(local.getUTCHours()).padStart(2, '0') + ':00';
+}
+
+function openCurrent1Slider(btn) {
   var panel = getCurrent1HistoryPanel();
   panel.style.display = 'block';
-  current1HistoryOpen = true;
+  current1SliderOpen = true;
 
-  if (current1HistoryList) {
-    renderCurrent1HistoryList(current1HistoryList);
+  if (current1TimeSteps) {
+    renderCurrent1Slider();
     return;
   }
 
@@ -91,47 +110,22 @@ function openCurrent1History(btn) {
   fetch(listUrl)
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(items) {
-      var files = (items || [])
+      var steps = (items || [])
         .filter(function(it) { return it.type === 'file' && /\.geojson$/i.test(it.name); })
         .map(function(it) {
-          var isForecast = /_forecast12h\.geojson$/i.test(it.name);
-          var m = it.name.match(/^(\d{2})-(\d{2})-(\d{4})/); // صيغة DD-MM-YYYY الفعلية للملفات
-          var dateObj = null, dateStr = it.name;
-          if (m) {
-            var day = m[1], month = m[2], year = m[3];
-            dateObj = new Date(year + '-' + month + '-' + day + 'T00:00:00');
-            dateStr = day + '-' + month + '-' + year;
-          }
-          var now = new Date();
-          var todayStr = String(now.getDate()).padStart(2, '0') + '-'
-                       + String(now.getMonth() + 1).padStart(2, '0') + '-'
-                       + now.getFullYear();
-
-          var label;
-          if (isForecast) {
-            label = 'توقّع +12 ساعة';
-          } else if (dateStr === todayStr) {
-            label = 'الآن';
-          } else {
-            label = dateStr;
-          }
-
-          return {
-            name: it.name,
-            date: dateStr,
-            sortKey: dateObj ? dateObj.getTime() + (isForecast ? 1 : 0) : 0,
-            label: label,
-            download_url: it.download_url
-          };
+          var utcDate = parseCurrent1UtcDate(it.name);
+          return utcDate ? { name: it.name, utcDate: utcDate, download_url: it.download_url } : null;
         })
-        .sort(function(a, b) { return b.sortKey - a.sortKey; }); // الأحدث أولاً
+        .filter(Boolean)
+        .sort(function(a, b) { return a.utcDate - b.utcDate; }); // الأقدم أولاً = الآن، ثم +3 +6 +9 +12
 
-      if (files.length === 0) {
-        panel.innerHTML = '<div style="padding:10px;color:#94a3b8;">لا توجد بيانات تاريخية بعد في مجلد "' + CURRENT1_HISTORY_FOLDER + '"</div>';
+      if (steps.length === 0) {
+        panel.innerHTML = '<div style="padding:10px;color:#94a3b8;">لا توجد بيانات تيار حالياً في مجلد "' + CURRENT1_HISTORY_FOLDER + '"</div>';
         return;
       }
-      current1HistoryList = files;
-      renderCurrent1HistoryList(files);
+      current1TimeSteps = steps;
+      current1ActiveIndex = 0;
+      renderCurrent1Slider();
     })
     .catch(function(e) {
       console.error('تعذر جلب أرشيف تيار السطح:', e);
@@ -139,10 +133,10 @@ function openCurrent1History(btn) {
     });
 }
 
-function closeCurrent1History() {
+function closeCurrent1Slider() {
   var panel = document.getElementById('current1-history-panel');
   if (panel) panel.style.display = 'none';
-  current1HistoryOpen = false;
+  current1SliderOpen = false;
 }
 
 function getCurrent1HistoryPanel() {
@@ -159,105 +153,100 @@ function getCurrent1HistoryPanel() {
     ].join(';');
     document.body.appendChild(panel);
 
-    // إغلاق عند النقر خارج القائمة — current1SuppressAutoClose يمنع الإغلاق
-    // الخاطئ لما يكون النقر جوّه القائمة نفسها لكن العنصر انحذف/انبنى من
-    // جديد بشكل متزامن قبل ما الحدث يوصل لهذا المستمع (يصير مع العناصر
-    // المحمّلة مسبقًا بالذاكرة، اللي يعاد رسم القائمة فورًا بعد اختيارها)
+    // إغلاق عند النقر خارج اللوحة — لا يُغلق عند النقر/السحب داخل الشريط نفسه
     document.addEventListener('click', function(ev) {
-      if (current1SuppressAutoClose) { current1SuppressAutoClose = false; return; }
-      if (!current1HistoryOpen) return;
+      if (!current1SliderOpen) return;
       var withinPanel = panel.contains(ev.target);
       var withinBtn   = current1Btn && current1Btn.contains(ev.target);
-      if (!withinPanel && !withinBtn) closeCurrent1History();
+      if (!withinPanel && !withinBtn) closeCurrent1Slider();
     });
   }
   return panel;
 }
 
-function renderCurrent1HistoryList(files) {
+function renderCurrent1Slider() {
   var panel = getCurrent1HistoryPanel();
-  var html = '<div style="font-weight:700;margin-bottom:6px;color:#fff;">🌊 أرشيف تيار السطح (1م)</div>';
+  var steps = current1TimeSteps;
+  var idx = (current1ActiveIndex != null) ? current1ActiveIndex : 0;
+
+  var html = '<div style="font-weight:700;margin-bottom:8px;color:#fff;">🌊 تيار السطح — توقّع الساعات</div>';
 
   if (current1Visible) {
-    html += '<div class="c1-history-hide" style="padding:7px 10px;margin-bottom:6px;border-radius:8px;'
-      + 'cursor:pointer;background:rgba(255,255,255,0.08);color:#f87171;font-weight:700;">'
-      + '&#10006; إخفاء الطبقة الحالية</div>';
+    html += '<div class="c1-hide" style="padding:6px 10px;margin-bottom:8px;border-radius:8px;'
+      + 'cursor:pointer;background:rgba(255,255,255,0.08);color:#f87171;font-weight:700;text-align:center;">'
+      + '&#10006; إخفاء الطبقة</div>';
   }
 
-  files.forEach(function(f) {
-    var active = (f.name === current1ActiveFile);
-    html += '<div class="c1-history-item" data-file="' + f.name + '" style="'
-      + 'padding:7px 10px;margin-bottom:4px;border-radius:8px;cursor:pointer;'
-      + 'background:' + (active ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.05)') + ';'
-      + 'border:1px solid ' + (active ? '#ef4444' : 'transparent') + ';">'
-      + f.label + (active ? ' &#9679;' : '') + '</div>';
-  });
+  html += '<div id="c1-slider-hour" style="text-align:center;font-weight:700;color:#fff;'
+    + 'margin-bottom:6px;font-size:.95rem;">' + formatLocalHour(steps[idx].utcDate) + '</div>';
+
+  html += '<input type="range" class="c1-slider" min="0" max="' + (steps.length - 1)
+    + '" step="1" value="' + idx + '" style="width:100%;">';
+
+  html += '<div style="display:flex;justify-content:space-between;margin-top:4px;color:#94a3b8;font-size:.65rem;">';
+  steps.forEach(function(s) { html += '<span>' + formatLocalHour(s.utcDate) + '</span>'; });
+  html += '</div>';
+
+  html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);'
+    + 'color:#64748b;font-size:.65rem;text-align:center;">🔄 تُحدَّث تلقائيًا كل 3 ساعات</div>';
 
   panel.innerHTML = html;
 
-  var hideBtn = panel.querySelector('.c1-history-hide');
+  var hideBtn = panel.querySelector('.c1-hide');
   if (hideBtn) hideBtn.onclick = function() { hideCurrent1Layer(); };
 
-  Array.prototype.forEach.call(panel.querySelectorAll('.c1-history-item'), function(el) {
-    el.onclick = function() {
-      current1SuppressAutoClose = true;
-      var fileName = this.getAttribute('data-file');
-      var entry = current1HistoryList.filter(function(f) { return f.name === fileName; })[0];
-      if (entry) loadCurrent1Snapshot(entry);
-    };
-  });
+  var slider = panel.querySelector('.c1-slider');
+  slider.oninput = function() {
+    var i = parseInt(this.value, 10);
+    current1ActiveIndex = i;
+    document.getElementById('c1-slider-hour').textContent = formatLocalHour(steps[i].utcDate);
+    loadCurrent1Snapshot(steps[i]);
+  };
 }
 
 function loadCurrent1Snapshot(entry) {
   if (current1Layer) { map.removeLayer(current1Layer); current1Layer = null; }
+  var hourLabel = formatLocalHour(entry.utcDate);
 
   if (current1LayerCache[entry.name]) {
     current1Layer = current1LayerCache[entry.name];
     current1Layer.addTo(map);
-    finishCurrent1Load(entry);
+    finishCurrent1Load(entry, hourLabel);
     return;
   }
 
   fetch(entry.download_url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      current1Layer = buildCurrent1Layer(data, entry.date);
+      current1Layer = buildCurrent1Layer(data, hourLabel);
       current1LayerCache[entry.name] = current1Layer;
       current1Layer.addTo(map);
-      finishCurrent1Load(entry);
+      finishCurrent1Load(entry, hourLabel);
     })
     .catch(function(e) {
       console.error('خطأ في تحميل تيار السطح:', e);
-      alert('فشل في تحميل بيانات تيار السطح لتاريخ ' + entry.date);
+      alert('فشل في تحميل بيانات تيار السطح للساعة ' + hourLabel);
     });
 }
 
-function finishCurrent1Load(entry) {
-  current1Visible     = true;
-  current1ActiveFile  = entry.name;
+function finishCurrent1Load(entry, hourLabel) {
+  current1Visible = true;
   if (current1Btn) {
     current1Btn.style.background  = 'rgba(239,68,68,0.25)';
     current1Btn.style.borderColor = '#ef4444';
   }
-  showCurrent1Legend(entry.date);
-
-  // نحدّث القائمة (بدل إغلاقها) عشان يبين العنصر النشط الجديد وخيار
-  // "إخفاء الطبقة الحالية" — يسهّل التنقل السريع بين الآن والتوقّع للمقارنة
-  if (current1HistoryOpen && current1HistoryList) {
-    renderCurrent1HistoryList(current1HistoryList);
-  }
+  showCurrent1Legend(hourLabel);
 }
 
 function hideCurrent1Layer() {
   if (current1Layer) map.removeLayer(current1Layer);
-  current1Visible    = false;
-  current1ActiveFile = null;
+  current1Visible = false;
   if (current1Btn) {
     current1Btn.style.background  = 'rgba(239,68,68,0.1)';
     current1Btn.style.borderColor = 'rgba(239,68,68,0.3)';
   }
   hideCurrent1Legend();
-  closeCurrent1History();
+  closeCurrent1Slider();
 }
 
 function toggleCurrent50(btn) {
