@@ -1,0 +1,48 @@
+name: Watchdog - إعادة تشغيل الـ pipelines المتأخرة
+
+on:
+  schedule:
+    - cron: '15 */2 * * *'   # كل ساعتين، بدقيقة مختلفة عن الباقي
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  check-and-retrigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: فحص وإعادة تشغيل عند التأخر
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          today=$(date -u +%F)
+          hour=$(date -u +%H)
+          now=$(date -u +%s)
+
+          # --- SSH: متوقع 08:00 UTC، نهاية المحاولات الداخلية ~13:30 UTC ---
+          ssh_date=$(git log -1 --format=%cd --date=short -- ssh.geojson)
+          if [ "$ssh_date" != "$today" ] && [ "$hour" -ge 14 ]; then
+            echo "🔁 SSH متأخر — تشغيل ssh-daily.yml"
+            gh workflow run ssh-daily.yml
+          fi
+
+          # --- SST: متوقع 13:30 UTC، نهاية المحاولات الداخلية ~19:00 UTC ---
+          sst_date=$(git log -1 --format=%cd --date=short -- tcont.geojson)
+          if [ "$sst_date" != "$today" ] && [ "$hour" -ge 19 ]; then
+            echo "🔁 SST متأخر — تشغيل sst-daily.yml"
+            gh workflow run sst-daily.yml
+          fi
+
+          # --- Currents: متوقع كل 3 ساعات — current50.geojson مسار ثابت وموثوق ---
+          cur_epoch=$(git log -1 --format=%ct -- current50.geojson)
+          age_hours=$(( (now - cur_epoch) / 3600 ))
+          if [ "$age_hours" -gt 4 ]; then
+            echo "🔁 Currents متأخر ($age_hours ساعة) — تشغيل currents-6h.yml"
+            gh workflow run currents-6h.yml
+          fi
