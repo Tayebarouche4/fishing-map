@@ -2,13 +2,9 @@
 "type": "FeatureCollection",
 "name": "rout",
 "features": [
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.5102102,36.3022342],[0.5011466,36.2942368]]]}},
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.4846187,36.2851732],[0.4739556,36.2750432]]]}},
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.4574277,36.2654464],[0.4435657,36.2531838]]]}},
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.4179742,36.2510512],[0.4062447,36.2345233]]]}},
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.250563,36.1662793],[0.2665577,36.1732103]]]}},
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.2772208,36.182274],[0.2990802,36.1876055]]]}},
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.3182739,36.199335],[0.3374675,36.2067992]]]}},
-{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.3913163,36.2313244],[0.3838521,36.2238602]]]}}
+{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.4464025,36.2982809],[0.3882638,36.2484477]]]}},
+{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.3349699,36.2103807],[0.3135139,36.195846],[0.2879052,36.1847719]]]}},
+{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.3854952,36.2456792],[0.3695763,36.2325288]]]}},
+{"type":"Feature","properties":{"id":null},"geometry":{"type":"MultiLineString","coordinates":[[[0.2186924,36.1619317],[0.2186924,36.1619317],[0.1986207,36.1557026],[0.1750883,36.1411679],[0.1695513,36.1342466]]]}}
 ]
 }
