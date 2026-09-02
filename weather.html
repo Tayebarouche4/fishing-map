@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<title>توقعات الأمواج — خريطة الصياد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0f1e;
+    --panel:#0f1830;
+    --panel-2:#131e3a;
+    --border:rgba(255,255,255,.08);
+    --text:#e9edf6;
+    --dim:#8a93ac;
+    --wave:#22d3ee;
+    --wave-fill:rgba(34,211,238,.14);
+    --night-band:rgba(99,102,241,.16);
+    --night-line:rgba(165,180,252,.35);
+    --day-band:rgba(245,158,11,.05);
+    --gold:#f5b942;
+    --danger:#ef233c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(34,211,238,.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Tajawal',sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+
+  /* ===== شريط علوي ===== */
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px;
+    background:rgba(10,15,30,.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .back-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:38px; height:38px; border-radius:50%;
+    background:var(--panel-2); border:1px solid var(--border);
+    color:var(--text); font-size:1.1rem; text-decoration:none;
+    flex-shrink:0;
+  }
+  .topbar-title{flex:1; min-width:0;}
+  .topbar-title h1{margin:0; font-size:1.02rem; font-weight:900;}
+  .topbar-sub{font-size:.72rem; color:var(--dim); margin-top:2px;}
+  .refresh-btn{
+    display:flex; align-items:center; gap:6px;
+    background:var(--panel-2); border:1px solid var(--border);
+    color:var(--gold); border-radius:20px; padding:8px 14px;
+    font-family:'Tajawal',sans-serif; font-size:.75rem; font-weight:700;
+    cursor:pointer; flex-shrink:0; white-space:nowrap;
+  }
+  .refresh-btn:active{transform:scale(.96);}
+  .refresh-btn .spin{display:inline-block;}
+  .refresh-btn.loading .spin{animation:spin .9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ===== المحتوى ===== */
+  .wrap{max-width:900px; margin:0 auto; padding:18px 14px 0;}
+
+  .status-line{
+    display:flex; align-items:center; gap:8px;
+    font-size:.72rem; color:var(--dim); padding:0 4px 14px;
+  }
+  .status-dot{width:7px; height:7px; border-radius:50%; background:var(--wave); flex-shrink:0;}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:16px 14px 10px;
+    margin-bottom:16px;
+  }
+  .card-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:6px; flex-wrap:wrap; gap:6px;
+  }
+  .card-title{font-size:.95rem; font-weight:900;}
+  .card-title .ic{margin-left:6px;}
+  .card-note{font-size:.68rem; color:var(--dim);}
+
+  .chart-box{position:relative; height:280px; margin-top:10px;}
+
+  .legend-row{
+    display:flex; flex-wrap:wrap; gap:14px;
+    font-size:.68rem; color:var(--dim);
+    padding:12px 4px 4px; border-top:1px solid var(--border); margin-top:8px;
+  }
+  .legend-item{display:flex; align-items:center; gap:6px;}
+  .legend-swatch{width:14px; height:10px; border-radius:3px; flex-shrink:0;}
+
+  .day-strip{
+    display:flex; gap:8px; margin-bottom:16px;
+  }
+  .day-pill{
+    flex:1; text-align:center; padding:10px 6px;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .day-pill-label{font-size:.72rem; color:var(--dim); font-weight:700;}
+  .day-pill-val{font-size:1.05rem; font-weight:900; margin-top:4px;}
+  .day-pill-val.low{color:#5eead4;}
+  .day-pill-val.mid{color:var(--gold);}
+  .day-pill-val.high{color:var(--danger);}
+
+  .loading-state, .error-state{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; padding:60px 20px; color:var(--dim); text-align:center; font-size:.85rem;
+  }
+  .spinner{
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid rgba(255,255,255,.12); border-top-color:var(--wave);
+    animation:spin 0.8s linear infinite;
+  }
+  .retry-btn{
+    margin-top:6px; padding:9px 20px; border:none; border-radius:20px;
+    background:var(--gold); color:#100c00; font-weight:900; font-size:.78rem;
+    font-family:'Tajawal',sans-serif; cursor:pointer;
+  }
+
+  .placeholder-card{
+    display:flex; align-items:center; gap:10px;
+    color:var(--dim); font-size:.75rem;
+    padding:16px; border:1px dashed var(--border); border-radius:14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back-btn" href="index.html" aria-label="عودة">➜</a>
+  <div class="topbar-title">
+    <h1>🌊 توقعات الأمواج</h1>
+    <div class="topbar-sub" id="loc-line">مستغانم — 36.320°N / 0.397°E</div>
+  </div>
+  <button class="refresh-btn" id="refresh-btn" onclick="forceRefresh()">
+    <span class="spin">⟳</span><span id="refresh-label">تحديث</span>
+  </button>
+</div>
+
+<div class="wrap">
+  <div class="status-line">
+    <span class="status-dot"></span>
+    <span id="status-text">جاري التحقق من البيانات المخزّنة...</span>
+  </div>
+
+  <div id="content-area">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div>جاري تحميل بيانات الأمواج...</div>
+    </div>
+  </div>
+
+  <div class="placeholder-card">
+    <span>➕</span>
+    <span>بيانات إضافية (الرياح، الخريطة التفاعلية...) ستُضاف هنا لاحقاً.</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ============================================================
+  // إعدادات
+  // ============================================================
+  var LAT = 36.320, LON = 0.397;   // نفس نقطة wave.py (مستغانم)
+  var LOCATION_LABEL = 'مستغانم — 36.320°N / 0.397°E';
+  var DATA_URL     = 'data/vmxl_forecast.json';
+  var CACHE_KEY    = 'wavePage_cache_v2';
+  var CACHE_HOURS  = 8;
+  var NIGHT_START = 19;   // 19:00
+  var NIGHT_END   = 6;    // 06:00
+  var CALM_MAX     = 0.8; // هادئ (آمن)
+  var MODERATE_MAX = 1.5; // معتدل (حذر) — فوقها خطير
+
+  var chartInstance = null;
+
+  function isNightHour(h){
+    return (h >= NIGHT_START) || (h < NIGHT_END);
+  }
+
+  function fmtHour(iso){
+    var t = iso.split('T')[1];
+    return t ? t.substring(0,5) : iso;
+  }
+  function fmtDayLabel(iso){
+    var dt = new Date(iso);
+    var days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    var months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    return days[dt.getDay()] + ' ' + dt.getDate() + ' ' + months[dt.getMonth()];
+  }
+  function fmtUpdated(ts){
+    var d = new Date(ts);
+    var h = d.getHours(), m = d.getMinutes();
+    return (h<10?'0':'')+h + ':' + (m<10?'0':'')+m;
+  }
+
+  // ============================================================
+  // تخزين مؤقت (8 ساعات)
+  // ============================================================
+  function readCache(){
+    try{
+      var raw = localStorage.getItem(CACHE_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+  function writeCache(data){
+    try{
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data }));
+    }catch(e){}
+  }
+  function cacheAgeHours(cache){
+    return (Date.now() - cache.ts) / 3600000;
+  }
+
+  // ============================================================
+  // التحميل
+  // ============================================================
+  function boot(){
+    var cache = readCache();
+    if(cache && cacheAgeHours(cache) < CACHE_HOURS){
+      setStatus('بيانات محفوظة — آخر تحديث ' + fmtUpdated(cache.ts) + ' (يُحدَّث تلقائياً كل 8 ساعات)');
+      render(cache.data, cache.ts);
+    } else {
+      fetchFresh(false);
+    }
+  }
+
+  function forceRefresh(){
+    fetchFresh(true);
+  }
+
+  function setStatus(txt){
+    document.getElementById('status-text').textContent = txt;
+  }
+
+  function setRefreshLoading(on){
+    var btn = document.getElementById('refresh-btn');
+    btn.classList.toggle('loading', on);
+    document.getElementById('refresh-label').textContent = on ? 'جارٍ...' : 'تحديث';
+  }
+
+  function fetchFresh(manual){
+    setRefreshLoading(true);
+    if(manual) setStatus('جاري تحميل آخر ملف VMXL المرفوع...');
+    fetch(DATA_URL + '?_=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(payload){
+        writeCache(payload);
+        setStatus('محدّث — بيانات مُصدَّرة في ' + fmtGenerated(payload.generated_at) + ' (يُتحقق تلقائياً كل 8 ساعات)');
+        render(payload, Date.now());
+      })
+      .catch(function(err){
+        var cache = readCache();
+        if(cache){
+          setStatus('تعذر الوصول للملف — عرض آخر بيانات محفوظة (' + fmtUpdated(cache.ts) + ')');
+          render(cache.data, cache.ts);
+        } else {
+          showError(err.message);
+        }
+      })
+      .finally(function(){ setRefreshLoading(false); });
+  }
+
+  function fmtGenerated(iso){
+    if(!iso) return '—';
+    try{
+      var d = new Date(iso);
+      var h = d.getHours(), m = d.getMinutes();
+      return (h<10?'0':'')+h + ':' + (m<10?'0':'')+m;
+    }catch(e){ return iso; }
+  }
+
+  function showError(msg){
+    document.getElementById('content-area').innerHTML =
+      '<div class="error-state">'
+      + '<div style="font-size:1.8rem;">⚠️</div>'
+      + '<div>تعذر تحميل ملف vmxl_forecast.json<br><small style="color:var(--dim);">' + msg + '</small><br>'
+      + '<small style="color:var(--dim);">تأكد من رفع الملف عبر لوحة التحديثات</small></div>'
+      + '<button class="retry-btn" onclick="forceRefresh()">إعادة المحاولة</button>'
+      + '</div>';
+  }
+
+  // ============================================================
+  // ملحق الرسم البياني — تظليل الليل/النهار
+  // ============================================================
+  function makeNightBandsPlugin(nightMeta){
+    return {
+      id: 'nightBands',
+      beforeDatasetsDraw: function(chart){
+        var ctx = chart.ctx;
+        var xScale = chart.scales.x;
+        var yScale = chart.scales.y;
+        var half = (xScale.getPixelForValue(1) - xScale.getPixelForValue(0)) / 2;
+        ctx.save();
+        var bandStart = null;
+        for(var i = 0; i <= nightMeta.length; i++){
+          var night = i < nightMeta.length ? nightMeta[i] : null;
+          if(night && bandStart === null){
+            bandStart = i;
+          } else if(!night && bandStart !== null){
+            var x1 = xScale.getPixelForValue(bandStart) - half;
+            var x2 = xScale.getPixelForValue(i - 1) + half;
+            ctx.fillStyle = 'rgba(99,102,241,.16)';
+            ctx.fillRect(x1, yScale.top, x2 - x1, yScale.bottom - yScale.top);
+            bandStart = null;
+          }
+        }
+        ctx.restore();
+      }
+    };
+  }
+
+  // ============================================================
+  // العرض
+  // ============================================================
+  function render(payload, updatedTs){
+    var times = payload.hourly.time;
+    var vmxl  = payload.hourly.vmxl_m;
+    var genLabel = fmtGenerated(payload.generated_at);
+
+    // بطاقات ملخص لكل يوم (أقصى قمة موجة)
+    var days = {};
+    for(var i=0;i<times.length;i++){
+      var dk = times[i].split('T')[0];
+      if(!days[dk]) days[dk] = [];
+      days[dk].push(vmxl[i]);
+    }
+    var dayKeys = Object.keys(days).slice(0, 3);
+
+    var stripHtml = '<div class="day-strip">';
+    dayKeys.forEach(function(dk){
+      var vals = days[dk].filter(function(v){ return v != null; });
+      var max = vals.length ? Math.max.apply(null, vals) : null;
+      var cls = max == null ? '' : (max < CALM_MAX ? 'low' : max < MODERATE_MAX ? 'mid' : 'high');
+      stripHtml += '<div class="day-pill">'
+        + '<div class="day-pill-label">' + fmtDayLabel(dk+'T12:00') + '</div>'
+        + '<div class="day-pill-val ' + cls + '">' + (max!=null ? max.toFixed(1)+' م' : '—') + '</div>'
+        + '</div>';
+    });
+    stripHtml += '</div>';
+
+    var contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = stripHtml +
+      '<div class="card">'
+      + '<div class="card-head">'
+      + '<div class="card-title"><span class="ic">📈</span>قمة الموجة VMXL — منحنى ساعي (3 أيام)</div>'
+      + '<div class="card-note">المصدر: Copernicus Marine — IBI (' + genLabel + ')</div>'
+      + '</div>'
+      + '<div class="chart-box"><canvas id="wave-chart"></canvas></div>'
+      + '<div class="legend-row">'
+      + '<div class="legend-item"><span class="legend-swatch" style="background:var(--night-band);"></span>ليل (19:00 – 06:00)</div>'
+      + '<div class="legend-item"><span class="legend-swatch" style="background:var(--day-band);border:1px solid var(--border);"></span>نهار</div>'
+      + '<div class="legend-item"><span style="display:inline-block;width:14px;border-top:2px dashed #f77f00;"></span>حد الحذر ' + CALM_MAX + ' م</div>'
+      + '<div class="legend-item"><span style="display:inline-block;width:14px;border-top:2px dashed #d62828;"></span>حد الخطر ' + MODERATE_MAX + ' م</div>'
+      + '<div class="legend-item" style="margin-right:auto;">آخر فحص: ' + fmtUpdated(updatedTs) + '</div>'
+      + '</div>'
+      + '</div>';
+
+    drawChart(times, vmxl);
+  }
+
+  function drawChart(times, vmxl){
+    var ctx = document.getElementById('wave-chart').getContext('2d');
+    var labels = times.map(fmtHour);
+    var nightMeta = times.map(function(t){
+      var h = parseInt(t.split('T')[1].substring(0,2), 10);
+      return isNightHour(h);
+    });
+
+    // تسميات مبسّطة: عرض ساعة كل 3 ساعات فقط لتفادي الازدحام
+    var tickCallback = function(val, index){
+      return index % 3 === 0 ? labels[index] : '';
+    };
+
+    if(chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels: labels,
+        datasets:[{
+          label:'قمة الموجة VMXL (م)',
+          data: vmxl,
+          borderColor: getComputedStyle(document.documentElement).getPropertyValue('--wave') || '#22d3ee',
+          backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--wave-fill') || 'rgba(34,211,238,.14)',
+          borderWidth: 2.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.35,
+          fill: true
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins:{
+          legend:{ display:false },
+          tooltip:{
+            rtl:true,
+            titleFont:{ family:'Tajawal' },
+            bodyFont:{ family:'Tajawal' },
+            callbacks:{
+              label: function(c){ return 'VMXL: ' + c.parsed.y.toFixed(2) + ' م'; }
+            }
+          }
+        },
+        scales:{
+          x:{
+            ticks:{
+              color:'#8a93ac', font:{ family:'Tajawal', size:10 },
+              callback: tickCallback, maxRotation:0, autoSkip:false
+            },
+            grid:{ color:'rgba(255,255,255,.05)' }
+          },
+          y:{
+            beginAtZero:true,
+            ticks:{ color:'#8a93ac', font:{ family:'Tajawal', size:10 },
+              callback:function(v){ return v + ' م'; } },
+            grid:{ color:'rgba(255,255,255,.05)' }
+          }
+        }
+      },
+      plugins:[ makeNightBandsPlugin(nightMeta), makeThresholdLinesPlugin() ]
+    });
+  }
+
+  function makeThresholdLinesPlugin(){
+    return {
+      id:'thresholdLines',
+      afterDatasetsDraw: function(chart){
+        var ctx = chart.ctx, xScale = chart.scales.x, yScale = chart.scales.y;
+        function line(val, color){
+          var y = yScale.getPixelForValue(val);
+          if(y < yScale.top || y > yScale.bottom) return;
+          ctx.save();
+          ctx.setLineDash([5,4]);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(xScale.left, y);
+          ctx.lineTo(xScale.right, y);
+          ctx.stroke();
+          ctx.restore();
+        }
+        line(CALM_MAX, '#f77f00');
+        line(MODERATE_MAX, '#d62828');
+      }
+    };
+  }
+
+  window.forceRefresh = forceRefresh;
+  boot();
+})();
+</script>
+</body>
+</html>
