@@ -1,0 +1,72 @@
+/* لوحة منحنى الأمواج — نافذة مركزية بملء الشاشة (أسهل تعامل على الهاتف) */
+.wave-overlay{
+  position:fixed; inset:0; z-index:2000;
+  background:rgba(5,8,18,.72);
+  display:none;
+  align-items:center; justify-content:center;
+  padding:16px;
+  font-family:'Tajawal',sans-serif; color:#e9edf6;
+}
+.wave-overlay.open{ display:flex; }
+.wave-modal{
+  width:100%; max-width:640px;
+  max-height:88vh;
+  background:#0f1830; border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;
+  box-shadow:0 10px 40px rgba(0,0,0,.55);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.wave-modal-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08);
+  flex-shrink:0;
+}
+.wave-modal-title{font-size:.92rem; font-weight:900;}
+.wave-modal-sub{font-size:.66rem; color:#8a93ac; margin-top:2px;}
+.wave-modal-close{
+  width:32px; height:32px; border-radius:50%; border:1px solid rgba(255,255,255,.1);
+  background:#131e3a; color:#e9edf6; font-size:1rem; cursor:pointer; flex-shrink:0;
+}
+.wave-modal-body{
+  padding:12px; overflow:auto;
+  display:block; flex:1; min-height:0;
+}
+.wave-chart-wrap{ width:100%; }
+.wave-day-strip{ display:flex; gap:8px; margin-bottom:12px; }
+.wave-day-pill{
+  flex:1; text-align:center; padding:8px 4px;
+  background:#131e3a; border:1px solid rgba(255,255,255,.08); border-radius:10px;
+}
+.wave-day-pill-label{font-size:.64rem; color:#8a93ac; font-weight:700;}
+.wave-day-pill-val{font-size:.92rem; font-weight:900; margin-top:3px;}
+.wave-day-pill-val.low{color:#5eead4;}
+.wave-day-pill-val.mid{color:#f5b942;}
+.wave-day-pill-val.high{color:#ef233c;}
+.wave-chart-box{position:relative; height:200px;}
+@media (max-width:420px){
+  .wave-chart-box{height:170px;}
+}
+.wave-legend-row{
+  display:flex; flex-wrap:wrap; gap:10px;
+  font-size:.62rem; color:#8a93ac;
+  padding:10px 2px 0;
+}
+.wave-legend-item{display:flex; align-items:center; gap:5px;}
+.wave-legend-swatch{width:12px; height:9px; border-radius:2px; flex-shrink:0;}
+.wave-status-line{font-size:.64rem; color:#8a93ac; padding:0 2px 8px;}
+.wave-modal-state{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; padding:40px 14px; color:#8a93ac; font-size:.82rem; text-align:center;
+}
+.wave-modal-spinner{
+  width:28px; height:28px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.12); border-top-color:#22d3ee;
+  animation:wave-spin .8s linear infinite;
+}
+@keyframes wave-spin{to{transform:rotate(360deg);}}
+.wave-modal-refresh{
+  margin-top:10px; padding:8px 18px; border:none; border-radius:20px;
+  background:#f5b942; color:#100c00; font-weight:900; font-size:.75rem;
+  font-family:'Tajawal',sans-serif; cursor:pointer;
+}
