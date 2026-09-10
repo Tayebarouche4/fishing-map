@@ -1,0 +1,48 @@
+name: Wave Period Every 8 Hours
+
+on:
+  schedule:
+    - cron: '0 */8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-wave-period-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install xarray netCDF4 numpy matplotlib copernicusmarine
+
+      - name: Run wave period pipeline
+        env:
+          CMEMS_USERNAME: ${{ secrets.CMEMS_USERNAME }}
+          CMEMS_PASSWORD: ${{ secrets.CMEMS_PASSWORD }}
+        run: python scripts/ci_wave_period_pipeline.py
+
+      - name: Commit and push results
+        run: |
+          git config user.name "wave-period-auto-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add weather/wave_period_night.png data/wave_period_night.json version.json
+          git diff --cached --quiet && echo "لا يوجد تغييرات جديدة" || git commit -m "تحديث تلقائي (كل 8 ساعات) لفترة الموج $(date -u +%Y-%m-%dT%H:%M)"
+
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "تم الرفع بنجاح"
+              break
+            fi
+            echo "فشل الرفع (محاولة $i) — جاري السحب وإعادة المحاولة..."
+            git pull --rebase --autostash origin main
+            sleep 5
+          done
