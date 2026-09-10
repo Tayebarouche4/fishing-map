@@ -1,0 +1,24 @@
+.weather-fab.wp-active{
+  background:rgba(34,211,238,.18);
+  border-color:#22d3ee;
+}
+
+.wave-period-legend{
+  position:fixed; left:14px; bottom:90px; z-index:850;
+  background:rgba(15,24,48,.92); border:1px solid rgba(255,255,255,.12);
+  border-radius:12px; padding:10px 12px; max-width:220px;
+  font-family:'Tajawal',sans-serif; color:#e9edf6;
+  box-shadow:0 6px 20px rgba(0,0,0,.4);
+  display:none;
+}
+.wp-legend-title{font-size:.7rem; font-weight:900; margin-bottom:6px;}
+.wp-legend-bar{
+  height:10px; border-radius:5px;
+  background:linear-gradient(to left, #30123b, #4662d7, #29bbec, #35e2a5, #a9fa32, #fca338, #d1372d, #7a0403);
+  margin-bottom:3px;
+}
+.wp-legend-scale{
+  display:flex; justify-content:space-between;
+  font-size:.62rem; color:#8a93ac; margin-bottom:6px;
+}
+.wp-legend-stats{font-size:.62rem; color:#8a93ac;}
