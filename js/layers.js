@@ -533,8 +533,8 @@ function buildCurrentTrendLayer(dataFirst, dataLast) {
 
     var delta = speedEnd - speedStart;
     var trend, color;
-    if (delta > CURRENT_TREND_THRESHOLD)       { trend = 'ازدياد';   color = '#22c55e'; }
-    else if (delta < -CURRENT_TREND_THRESHOLD) { trend = 'تراجع';    color = '#ef4444'; }
+    if (delta > CURRENT_TREND_THRESHOLD)       { trend = 'ازدياد';   color = '#ef4444'; } // أحمر = تحذير: التيار سيقوى
+    else if (delta < -CURRENT_TREND_THRESHOLD) { trend = 'تراجع';    color = '#22c55e'; } // أخضر = أمان: التيار سيهدأ
     else                                        { trend = 'شبه ثابت'; color = '#9ca3af'; }
 
     var marker = L.circleMarker([g.lat, g.lon], {
@@ -561,8 +561,8 @@ function buildCurrentTrendLayer(dataFirst, dataLast) {
     currentTrendBtn.style.borderColor = '#f59e0b';
   }
 
-  var nUp   = markers.filter(function(m) { return m.options.color === '#22c55e'; }).length;
-  var nDown = markers.filter(function(m) { return m.options.color === '#ef4444'; }).length;
+  var nUp   = markers.filter(function(m) { return m.options.color === '#ef4444'; }).length;
+  var nDown = markers.filter(function(m) { return m.options.color === '#22c55e'; }).length;
   var nFlat = markers.filter(function(m) { return m.options.color === '#9ca3af'; }).length;
   console.log('تطوّر التيار السطحي: ' + nUp + ' ازدياد، ' + nDown + ' تراجع، ' + nFlat + ' شبه ثابت.');
 }
