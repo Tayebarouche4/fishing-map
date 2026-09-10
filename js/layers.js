@@ -419,34 +419,63 @@ function markCurrent50Visible(v) {
   }
 }
 
-// ===== تطوّر التيار السطحي (ازدياد / تراجع / شبه ثابت) =====
-// يقارن أول محطة ("الآن") بآخر محطة ("+12h") من نفس أرشيف current1 المُستخدم
-// أصلاً في اللوحة الموحّدة أعلاه — لا يُنشئ أي بيانات جديدة، فقط يعيد استخدام
-// آخر تحديث موجود في currents/current1.
-var currentTrendLayer   = null;
-var currentTrendVisible = false;
-var currentTrendBtn     = null;
+// ===== تطوّر التيار السطحي (أداة تفاعلية: اختيار المدة) =====
+// يقارن محطتين يختارهما الصياد بنفسه (من شريطين "من" و"إلى") من نفس أرشيف
+// current1 المُستخدم أصلاً في اللوحة الموحّدة أعلاه — لا يُنشئ أي بيانات
+// جديدة، فقط يعيد استخدام آخر تحديث موجود في currents/current1.
+var currentTrendLayer     = null;
+var currentTrendVisible   = false;
+var currentTrendBtn       = null;
+var currentTrendPanelOpen = false;
+var currentTrendSteps     = null;  // [{name, utcDate, download_url}] كل المحطات المتاحة
+var currentTrendStartIdx  = 0;
+var currentTrendEndIdx    = null;
+var currentTrendDataCache = {};    // filename -> بيانات GeoJSON مُحمَّلة مسبقاً
 var CURRENT_TREND_THRESHOLD = 0.02; // فرق أقل من هذا يُعتبر "شبه ثابت" (بنفس وحدة speed)
 
 function toggleCurrentTrend(btn) {
   currentTrendBtn = btn;
 
-  if (currentTrendVisible) {
-    map.removeLayer(currentTrendLayer);
-    currentTrendVisible = false;
-    btn.style.background  = 'rgba(245,158,11,0.1)';
-    btn.style.borderColor = 'rgba(245,158,11,0.3)';
+  if (currentTrendPanelOpen) { closeCurrentTrendPanel(); return; }
+
+  // إن كانت الطبقة ظاهرة واللوحة مغلقة — النقر على الزر يُخفيها مباشرة
+  if (currentTrendVisible) { hideCurrentTrendLayer(); return; }
+
+  openCurrentTrendPanel();
+}
+
+function hideCurrentTrendLayer() {
+  if (currentTrendLayer) map.removeLayer(currentTrendLayer);
+  currentTrendVisible = false;
+  resetCurrentTrendBtn();
+}
+
+function resetCurrentTrendBtn() {
+  if (currentTrendBtn) {
+    currentTrendBtn.style.background  = 'rgba(245,158,11,0.1)';
+    currentTrendBtn.style.borderColor = 'rgba(245,158,11,0.3)';
+  }
+}
+
+function markCurrentTrendVisible() {
+  currentTrendVisible = true;
+  if (currentTrendBtn) {
+    currentTrendBtn.style.background  = 'rgba(245,158,11,0.25)';
+    currentTrendBtn.style.borderColor = '#f59e0b';
+  }
+}
+
+function openCurrentTrendPanel() {
+  var panel = getCurrentTrendPanel();
+  panel.style.display = 'block';
+  currentTrendPanelOpen = true;
+
+  if (currentTrendSteps) {
+    renderCurrentTrendPanel();
     return;
   }
 
-  if (currentTrendLayer) {
-    currentTrendLayer.addTo(map);
-    currentTrendVisible = true;
-    btn.style.background  = 'rgba(245,158,11,0.25)';
-    btn.style.borderColor = '#f59e0b';
-    return;
-  }
-
+  panel.innerHTML = '<div style="padding:10px;color:#94a3b8;">جاري التحميل...</div>';
   var listUrl = 'https://api.github.com/repos/' + CURRENTS_REPO_OWNER + '/' + CURRENTS_REPO_NAME
               + '/contents/' + CURRENT1_HISTORY_FOLDER;
 
@@ -463,33 +492,146 @@ function toggleCurrentTrend(btn) {
         .sort(function(a, b) { return a.utcDate - b.utcDate; });
 
       if (steps.length < 2) {
-        alert('لا تتوفر محطتان على الأقل حاليًا لحساب تطوّر التيار السطحي');
-        resetCurrentTrendBtn();
+        panel.innerHTML = '<div style="padding:10px;color:#94a3b8;">لا تتوفر محطتان على الأقل حاليًا للمقارنة</div>';
         return;
       }
 
-      var first = steps[0];
-      var last  = steps[steps.length - 1];
-
-      return Promise.all([
-        fetch(first.download_url).then(function(r) { return r.json(); }),
-        fetch(last.download_url).then(function(r) { return r.json(); })
-      ]).then(function(results) {
-        buildCurrentTrendLayer(results[0], results[1]);
-      });
+      currentTrendSteps    = steps;
+      currentTrendStartIdx = 0;
+      currentTrendEndIdx   = steps.length - 1;
+      renderCurrentTrendPanel();
     })
     .catch(function(e) {
-      console.error('تعذر حساب تطوّر التيار السطحي:', e);
-      alert('فشل تحميل بيانات تطوّر التيار السطحي');
-      resetCurrentTrendBtn();
+      console.error('تعذر جلب أرشيف تيار السطح لأداة التطوّر:', e);
+      panel.innerHTML = '<div style="padding:10px;color:#f87171;">تعذر تحميل قائمة المحطات — تحقق من الاتصال</div>';
     });
 }
 
-function resetCurrentTrendBtn() {
-  if (currentTrendBtn) {
-    currentTrendBtn.style.background  = 'rgba(245,158,11,0.1)';
-    currentTrendBtn.style.borderColor = 'rgba(245,158,11,0.3)';
+function closeCurrentTrendPanel() {
+  var panel = document.getElementById('current-trend-panel');
+  if (panel) panel.style.display = 'none';
+  currentTrendPanelOpen = false;
+}
+
+function getCurrentTrendPanel() {
+  var panel = document.getElementById('current-trend-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'current-trend-panel';
+    panel.style.cssText = [
+      'position:fixed', 'bottom:20px', 'left:245px', 'z-index:1060',
+      'background:rgba(6,13,24,0.97)', 'border:1px solid rgba(245,158,11,0.35)',
+      'border-radius:12px', 'padding:10px', 'font-family:Tajawal,sans-serif',
+      'font-size:.75rem', 'color:#e2e8f0', 'direction:rtl', 'min-width:220px',
+      'max-height:320px', 'overflow-y:auto', 'box-shadow:0 4px 16px rgba(0,0,0,0.5)'
+    ].join(';');
+    document.body.appendChild(panel);
+
+    document.addEventListener('click', function(ev) {
+      if (!currentTrendPanelOpen) return;
+      var withinPanel = panel.contains(ev.target);
+      var withinBtn   = currentTrendBtn && currentTrendBtn.contains(ev.target);
+      if (!withinPanel && !withinBtn) closeCurrentTrendPanel();
+    });
   }
+  return panel;
+}
+
+function renderCurrentTrendPanel() {
+  var panel = getCurrentTrendPanel();
+  var steps = currentTrendSteps;
+  var si = currentTrendStartIdx;
+  var ei = currentTrendEndIdx;
+
+  var html = '<div style="font-weight:700;margin-bottom:8px;color:#fff;">📈 تطوّر التيار السطحي</div>'
+    + '<div style="color:#94a3b8;margin-bottom:10px;">اختر المدة التي تريد معرفة تطوّر التيار خلالها:</div>';
+
+  html += '<div style="margin-bottom:4px;color:#f59e0b;font-weight:700;">من: <span id="trend-start-label">'
+    + formatLocalHour(steps[si].utcDate) + '</span></div>'
+    + '<input type="range" id="trend-start-slider" min="0" max="' + (steps.length - 1)
+    + '" step="1" value="' + si + '" style="width:100%;">';
+
+  html += '<div style="margin:10px 0 4px;color:#f59e0b;font-weight:700;">إلى: <span id="trend-end-label">'
+    + formatLocalHour(steps[ei].utcDate) + '</span></div>'
+    + '<input type="range" id="trend-end-slider" min="0" max="' + (steps.length - 1)
+    + '" step="1" value="' + ei + '" style="width:100%;">';
+
+  html += '<div style="display:flex;justify-content:space-between;margin-top:4px;color:#94a3b8;font-size:.65rem;">';
+  steps.forEach(function(s) { html += '<span>' + formatLocalHour(s.utcDate) + '</span>'; });
+  html += '</div>';
+
+  html += '<button id="trend-apply-btn" style="width:100%;margin-top:12px;padding:8px;border:none;'
+    + 'border-radius:8px;background:#f59e0b;color:#1a1206;font-weight:700;cursor:pointer;">تطبيق</button>';
+
+  html += '<div id="trend-status" style="margin-top:8px;color:#94a3b8;font-size:.68rem;text-align:center;"></div>';
+
+  if (currentTrendVisible) {
+    html += '<div id="trend-hide-btn" style="margin-top:6px;padding:6px 10px;border-radius:8px;'
+      + 'cursor:pointer;background:rgba(255,255,255,0.08);color:#fbbf24;font-weight:700;text-align:center;">'
+      + '&#10006; إخفاء الطبقة</div>';
+  }
+
+  panel.innerHTML = html;
+
+  var startSlider = panel.querySelector('#trend-start-slider');
+  var endSlider   = panel.querySelector('#trend-end-slider');
+
+  startSlider.oninput = function() {
+    var v = parseInt(this.value, 10);
+    if (v >= currentTrendEndIdx) v = currentTrendEndIdx - 1; // يجب أن تبقى "من" قبل "إلى"
+    if (v < 0) v = 0;
+    this.value = v;
+    currentTrendStartIdx = v;
+    panel.querySelector('#trend-start-label').textContent = formatLocalHour(steps[v].utcDate);
+  };
+
+  endSlider.oninput = function() {
+    var v = parseInt(this.value, 10);
+    if (v <= currentTrendStartIdx) v = currentTrendStartIdx + 1; // يجب أن تبقى "إلى" بعد "من"
+    if (v > steps.length - 1) v = steps.length - 1;
+    this.value = v;
+    currentTrendEndIdx = v;
+    panel.querySelector('#trend-end-label').textContent = formatLocalHour(steps[v].utcDate);
+  };
+
+  panel.querySelector('#trend-apply-btn').onclick = function() { applyCurrentTrendRange(); };
+
+  var hideBtn = panel.querySelector('#trend-hide-btn');
+  if (hideBtn) hideBtn.onclick = function() { hideCurrentTrendLayer(); renderCurrentTrendPanel(); };
+}
+
+function getTrendStationData(entry) {
+  if (currentTrendDataCache[entry.name]) {
+    return Promise.resolve(currentTrendDataCache[entry.name]);
+  }
+  return fetch(entry.download_url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      currentTrendDataCache[entry.name] = data;
+      return data;
+    });
+}
+
+function applyCurrentTrendRange() {
+  var status = document.getElementById('trend-status');
+  var startEntry = currentTrendSteps[currentTrendStartIdx];
+  var endEntry   = currentTrendSteps[currentTrendEndIdx];
+
+  if (status) status.textContent = 'جاري الحساب...';
+
+  Promise.all([getTrendStationData(startEntry), getTrendStationData(endEntry)])
+    .then(function(results) {
+      buildCurrentTrendLayer(results[0], results[1], startEntry, endEntry);
+      if (status) {
+        status.textContent = 'تم — من ' + formatLocalHour(startEntry.utcDate)
+          + ' إلى ' + formatLocalHour(endEntry.utcDate);
+      }
+      renderCurrentTrendPanel(); // لإظهار زر "إخفاء الطبقة" الآن بعد أن أصبحت ظاهرة
+    })
+    .catch(function(e) {
+      console.error('تعذر حساب تطوّر التيار السطحي:', e);
+      if (status) status.textContent = 'فشل تحميل البيانات — حاول مجددًا';
+    });
 }
 
 // نقطة الشبكة الثابتة: لا نعتمد على مركز ثقل شكل السهم (جسم+رأس) لأنه ينزاح
@@ -513,9 +655,14 @@ function gridKeyFromFeature(feature) {
   return { key: lon.toFixed(4) + ',' + lat.toFixed(4), lon: lon, lat: lat };
 }
 
-function buildCurrentTrendLayer(dataFirst, dataLast) {
+function buildCurrentTrendLayer(dataStart, dataEnd, startEntry, endEntry) {
+  if (currentTrendLayer) { map.removeLayer(currentTrendLayer); currentTrendLayer = null; }
+
+  var startLabel = startEntry ? formatLocalHour(startEntry.utcDate) : 'البداية';
+  var endLabel   = endEntry   ? formatLocalHour(endEntry.utcDate)   : 'النهاية';
+
   var startByKey = {};
-  (dataFirst.features || []).forEach(function(f) {
+  (dataStart.features || []).forEach(function(f) {
     var g = gridKeyFromFeature(f);
     var speed = f.properties && f.properties.speed;
     if (!g || speed == null) return;
@@ -523,7 +670,7 @@ function buildCurrentTrendLayer(dataFirst, dataLast) {
   });
 
   var markers = [];
-  (dataLast.features || []).forEach(function(f) {
+  (dataEnd.features || []).forEach(function(f) {
     var g = gridKeyFromFeature(f);
     var speedEnd = f.properties && f.properties.speed;
     if (!g || speedEnd == null) return;
@@ -543,9 +690,10 @@ function buildCurrentTrendLayer(dataFirst, dataLast) {
     marker.bindPopup(
       '<div style="font-family:Tajawal;font-size:.9rem;color:#060d18;text-align:right;direction:rtl;">'
       + '<b>📈 تطوّر التيار السطحي</b><br>'
+      + 'المدة: ' + startLabel + ' ← ' + endLabel + '<br>'
       + 'الحالة: ' + trend + '<br>'
-      + 'السرعة الآن: ' + speedStart.toFixed(2) + '<br>'
-      + 'السرعة بعد 12 ساعة: ' + speedEnd.toFixed(2) + '<br>'
+      + 'السرعة في البداية: ' + speedStart.toFixed(2) + '<br>'
+      + 'السرعة في النهاية: ' + speedEnd.toFixed(2) + '<br>'
       + 'الفرق: ' + (delta >= 0 ? '+' : '') + delta.toFixed(2)
       + '</div>'
     );
@@ -554,17 +702,13 @@ function buildCurrentTrendLayer(dataFirst, dataLast) {
 
   currentTrendLayer = L.layerGroup(markers);
   currentTrendLayer.addTo(map);
-  currentTrendVisible = true;
-
-  if (currentTrendBtn) {
-    currentTrendBtn.style.background  = 'rgba(245,158,11,0.25)';
-    currentTrendBtn.style.borderColor = '#f59e0b';
-  }
+  markCurrentTrendVisible();
 
   var nUp   = markers.filter(function(m) { return m.options.color === '#ef4444'; }).length;
   var nDown = markers.filter(function(m) { return m.options.color === '#22c55e'; }).length;
   var nFlat = markers.filter(function(m) { return m.options.color === '#9ca3af'; }).length;
-  console.log('تطوّر التيار السطحي: ' + nUp + ' ازدياد، ' + nDown + ' تراجع، ' + nFlat + ' شبه ثابت.');
+  console.log('تطوّر التيار السطحي (' + startLabel + ' ← ' + endLabel + '): '
+    + nUp + ' ازدياد، ' + nDown + ' تراجع، ' + nFlat + ' شبه ثابت.');
 }
 
 function buildCurrent50Layer(data, dateLabel) {
