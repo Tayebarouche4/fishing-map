@@ -68,8 +68,20 @@ var CURRENT50_HISTORY_FOLDER = 'currents/current50';
 var CURRENT1_FILENAME_RE  = /^current1_(\d{4})-(\d{2})-(\d{2})_(\d{2})h00Z\.geojson$/i;
 var CURRENT50_FILENAME_RE = /^current50_(\d{4})-(\d{2})-(\d{2})_(\d{2})h00Z\.geojson$/i;
 
-var current1LayerCache  = {};  // filename -> L.GeoJSON (مُحمّل مسبقاً)
-var current50LayerCache = {};  // filename -> L.GeoJSON (مُحمّل مسبقاً)
+var current1DataCache  = {};  // filename -> بيانات GeoJSON خام (مُحمّلة مسبقاً، تُعاد بناء الطبقة منها عند تغيّر فلتر القوة)
+var current50DataCache = {};  // filename -> بيانات GeoJSON خام (مُحمّلة مسبقاً)
+
+// فلتر شدة/قوة التيار — 4 درجات (نفس تصنيف ألوان current1: أبيض/أصفر/برتقالي/أحمر)
+// تُطبَّق على current1 و current50 معًا لأنها نفس وحدة القياس (speed)
+var currentsSpeedFilter = { weak: true, medium: true, strong: true, veryStrong: true };
+
+function speedPassesCurrentsFilter(speed) {
+  speed = speed || 0;
+  if (speed >= 0.50) return currentsSpeedFilter.veryStrong;
+  if (speed >= 0.35) return currentsSpeedFilter.strong;
+  if (speed >= 0.15) return currentsSpeedFilter.medium;
+  return currentsSpeedFilter.weak;
+}
 
 // قائمة موحّدة بكل الأوقات الموجودة في أي من الطبقتين:
 // [{utcDate, c1: entry|null, c50: entry|null}, ...] مرتبة تصاعديًا
@@ -259,6 +271,22 @@ function renderCurrentsSlider() {
     + '<input type="checkbox" class="cur-chk-c50" ' + (currentsShowC50 ? 'checked' : '') + '> ت.ع</label>'
     + '</div>';
 
+  html += '<div style="color:#94a3b8;margin-bottom:4px;">تصفية حسب قوة التيار:</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px;">'
+    + '<label style="display:flex;align-items:center;gap:4px;color:#e5e7eb;cursor:pointer;">'
+    + '<input type="checkbox" class="cur-chk-weak" ' + (currentsSpeedFilter.weak ? 'checked' : '') + '>'
+    + '<span style="width:10px;height:10px;border-radius:50%;background:#ffffff;border:1px solid #94a3b8;display:inline-block;"></span> ضعيف</label>'
+    + '<label style="display:flex;align-items:center;gap:4px;color:#e5e7eb;cursor:pointer;">'
+    + '<input type="checkbox" class="cur-chk-medium" ' + (currentsSpeedFilter.medium ? 'checked' : '') + '>'
+    + '<span style="width:10px;height:10px;border-radius:50%;background:#facc15;display:inline-block;"></span> متوسط</label>'
+    + '<label style="display:flex;align-items:center;gap:4px;color:#e5e7eb;cursor:pointer;">'
+    + '<input type="checkbox" class="cur-chk-strong" ' + (currentsSpeedFilter.strong ? 'checked' : '') + '>'
+    + '<span style="width:10px;height:10px;border-radius:50%;background:#f97316;display:inline-block;"></span> قوي</label>'
+    + '<label style="display:flex;align-items:center;gap:4px;color:#e5e7eb;cursor:pointer;">'
+    + '<input type="checkbox" class="cur-chk-very-strong" ' + (currentsSpeedFilter.veryStrong ? 'checked' : '') + '>'
+    + '<span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block;"></span> شديد</label>'
+    + '</div>';
+
   html += '<div id="cur-slider-hour" style="text-align:center;font-weight:700;color:#fff;'
     + 'margin-bottom:6px;font-size:.95rem;">' + formatLocalHour(entry.utcDate) + '</div>';
 
@@ -296,6 +324,27 @@ function renderCurrentsSlider() {
     currentsShowC50 = this.checked;
     applyCurrentsStep(currentsCombinedSteps[currentsActiveIndex]);
   };
+
+  function onSpeedFilterChange() {
+    applyCurrentsStep(currentsCombinedSteps[currentsActiveIndex]);
+  }
+  panel.querySelector('.cur-chk-weak').onchange = function() {
+    currentsSpeedFilter.weak = this.checked;
+    onSpeedFilterChange();
+  };
+  panel.querySelector('.cur-chk-medium').onchange = function() {
+    currentsSpeedFilter.medium = this.checked;
+    onSpeedFilterChange();
+  };
+  panel.querySelector('.cur-chk-strong').onchange = function() {
+    currentsSpeedFilter.strong = this.checked;
+    onSpeedFilterChange();
+  };
+  panel.querySelector('.cur-chk-very-strong').onchange = function() {
+    currentsSpeedFilter.veryStrong = this.checked;
+    onSpeedFilterChange();
+  };
+
   panel.querySelector('.cur-play-btn').onclick = function() { toggleCurrentsPlay(); };
 
   panel.querySelector('.cur-slider').oninput = function() {
@@ -349,8 +398,8 @@ function setCurrent1Layer(entry) {
   if (current1Layer) { map.removeLayer(current1Layer); current1Layer = null; }
   var hourLabel = formatLocalHour(entry.utcDate);
 
-  if (current1LayerCache[entry.name]) {
-    current1Layer = current1LayerCache[entry.name];
+  if (current1DataCache[entry.name]) {
+    current1Layer = buildCurrent1Layer(current1DataCache[entry.name], hourLabel);
     current1Layer.addTo(map);
     markCurrent1Visible(true);
     return;
@@ -359,8 +408,8 @@ function setCurrent1Layer(entry) {
   fetch(entry.download_url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
+      current1DataCache[entry.name] = data;
       current1Layer = buildCurrent1Layer(data, hourLabel);
-      current1LayerCache[entry.name] = current1Layer;
       current1Layer.addTo(map);
       markCurrent1Visible(true);
     })
@@ -387,8 +436,8 @@ function setCurrent50Layer(entry) {
   if (current50Layer) { map.removeLayer(current50Layer); current50Layer = null; }
   var hourLabel = formatLocalHour(entry.utcDate);
 
-  if (current50LayerCache[entry.name]) {
-    current50Layer = current50LayerCache[entry.name];
+  if (current50DataCache[entry.name]) {
+    current50Layer = buildCurrent50Layer(current50DataCache[entry.name], hourLabel);
     current50Layer.addTo(map);
     markCurrent50Visible(true);
     return;
@@ -397,8 +446,8 @@ function setCurrent50Layer(entry) {
   fetch(entry.download_url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
+      current50DataCache[entry.name] = data;
       current50Layer = buildCurrent50Layer(data, hourLabel);
-      current50LayerCache[entry.name] = current50Layer;
       current50Layer.addTo(map);
       markCurrent50Visible(true);
     })
@@ -717,6 +766,10 @@ function buildCurrentTrendLayer(dataStart, dataEnd, startEntry, endEntry) {
 
 function buildCurrent50Layer(data, dateLabel) {
   return L.geoJSON(data, {
+    filter: function(feature) {
+      var speed = (feature.properties && feature.properties.speed) || 0;
+      return speedPassesCurrentsFilter(speed);
+    },
     style: function(feature) {
       var speed = feature.properties.speed || 0;
       var color, fillColor;
@@ -741,6 +794,10 @@ function buildCurrent50Layer(data, dateLabel) {
 
 function buildCurrent1Layer(data, dateLabel) {
   return L.geoJSON(data, {
+    filter: function(feature) {
+      var speed = (feature.properties && feature.properties.speed) || 0;
+      return speedPassesCurrentsFilter(speed);
+    },
     style: function(feature) {
       var speed = feature.properties.speed || 0;
       var color, fillColor;
