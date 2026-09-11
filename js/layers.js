@@ -149,6 +149,8 @@ function toggleCurrent50(btn) {
 }
 
 function openCurrentsPanel() {
+  if (currentTrendPanelOpen) closeCurrentTrendPanel(); // نفس مكان اللوحتين على الهاتف — لا تفتحان معًا
+
   var panel = getCurrentsHistoryPanel();
   panel.style.display = 'block';
   currentsPanelOpen = true;
@@ -466,6 +468,8 @@ function markCurrentTrendVisible() {
 }
 
 function openCurrentTrendPanel() {
+  if (currentsPanelOpen) closeCurrentsPanel(); // نفس مكان اللوحتين على الهاتف — لا تفتحان معًا
+
   var panel = getCurrentTrendPanel();
   panel.style.display = 'block';
   currentTrendPanelOpen = true;
@@ -519,7 +523,7 @@ function getCurrentTrendPanel() {
     panel = document.createElement('div');
     panel.id = 'current-trend-panel';
     panel.style.cssText = [
-      'position:fixed', 'bottom:20px', 'left:245px', 'z-index:1060',
+      'position:fixed', 'bottom:20px', 'left:16px', 'z-index:1060',
       'background:rgba(6,13,24,0.97)', 'border:1px solid rgba(245,158,11,0.35)',
       'border-radius:12px', 'padding:10px', 'font-family:Tajawal,sans-serif',
       'font-size:.75rem', 'color:#e2e8f0', 'direction:rtl', 'min-width:220px',
