@@ -14,8 +14,10 @@ ci_wave_period_pipeline.py
 المخرجات:
 - weather/wave_period_night.png   : خريطة ملوّنة (RGBA شفافة خارج البيانات)
                                      تُعرض كـ L.imageOverlay فوق خريطة Leaflet
-- data/wave_period_night.json     : الحدود الجغرافية + شبكة القيم الخام
-                                     (لعرض القيمة عند تمرير الفأرة/اللمس)
+- data/wave_period_night.json     : الحدود الجغرافية + شبكة القيم الخام الكاملة
+                                     (بدقة الشبكة الأصلية بدون تصغير) — تُستعمل
+                                     لتلميح الفأرة/اللمس، ولإعادة التلوين الحي
+                                     في المتصفح عبر سلايدر تباين تفاعلي
                                      + حدود مقياس الألوان لرسم مفتاح الخريطة
 """
 
@@ -167,16 +169,10 @@ def _save_colored_png(lon, lat, data, out_path):
     mpimg.imsave(out_path, rgba)
 
 
-def _downsample_grid(lon, lat, data, max_points=60):
-    """تقليل دقة الشبكة المصدَّرة لـJSON (كافية لتلميح الفأرة، بدون تضخيم حجم الملف)"""
-    lon_step = max(1, len(lon) // max_points)
-    lat_step = max(1, len(lat) // max_points)
-    lon_ds = lon[::lon_step]
-    lat_ds = lat[::lat_step]
-    data_ds = data[::lat_step, ::lon_step]
-    # استبدال NaN بـ None حتى يصلح JSON
-    values = [[(None if np.isnan(v) else round(float(v), 2)) for v in row] for row in data_ds]
-    return lon_ds.tolist(), lat_ds.tolist(), values
+def _full_grid(lon, lat, data):
+    """يصدّر الشبكة كاملة بدون تصغير — مطلوبة لإعادة التلوين الحي في المتصفح (سلايدر التباين)"""
+    values = [[(None if np.isnan(v) else round(float(v), 2)) for v in row] for row in data]
+    return lon.tolist(), lat.tolist(), values
 
 
 def main():
@@ -203,7 +199,7 @@ def main():
     _save_colored_png(lon, lat, data, png_path)
     print("تم حفظ الخريطة الملوّنة في: " + str(png_path))
 
-    lon_ds, lat_ds, values_ds = _downsample_grid(lon, lat, data)
+    lon_ds, lat_ds, values_ds = _full_grid(lon, lat, data)
     json_payload = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "night_start_local": night_start_local.strftime("%Y-%m-%dT%H:%M:%S"),
