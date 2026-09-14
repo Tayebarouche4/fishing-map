@@ -55,6 +55,10 @@ var current50Layer     = null, current50Visible = false;
 var sshGeojsonLayer    = null, sshGeojsonVisible = false;
 var tcontLayer         = null, tcontVisible = false;
 var sstnOverlay        = null, sstnVisible = false;
+var sstFullOverlay     = null, sstFullVisible = false;
+
+// حدود المنطقة الأوسع لـ "حرارة سطح كامل البحر" -- [[جنوب,غرب],[شمال,شرق]]
+var SST_FULL_BOUNDS = [[34.65, -6.68], [38.7, 9.2]];
 
 var CURRENTS_REPO_OWNER     = 'Tayebarouche4';
 var CURRENTS_REPO_NAME      = 'fishing-map';
@@ -962,6 +966,35 @@ function loadSSTN(btn) {
   };
   img.onerror = function() {
     alert('تعذر تحميل صورة sstn. تأكد من وجود tiles/sstn.png');
+  };
+  img.src = url;
+}
+
+// ============================================================
+// حرارة سطح كامل البحر — نطاق أوسع من sstn، تُقرأ من tiles/sst_full.png
+// ============================================================
+
+function toggleSSTFull(btn) {
+  if (sstFullVisible) {
+    if (sstFullOverlay) { map.removeLayer(sstFullOverlay); sstFullOverlay = null; }
+    sstFullVisible = false;
+    btn.style.background  = 'rgba(59,130,246,0.1)';
+    btn.style.borderColor = 'rgba(59,130,246,0.3)';
+  } else { loadSSTFull(btn); }
+}
+
+function loadSSTFull(btn) {
+  // صورة مؤقتة — تُجلب حية بدون كاش في كل مرة
+  var url = TILES_BASE + 'sst_full.png?_=' + Date.now();
+  var img = new Image();
+  img.onload = function() {
+    sstFullOverlay = L.imageOverlay(url, SST_FULL_BOUNDS, { opacity: currentOpacity }).addTo(map);
+    sstFullVisible = true;
+    btn.style.background  = 'rgba(59,130,246,0.25)';
+    btn.style.borderColor = '#3b82f6';
+  };
+  img.onerror = function() {
+    alert('تعذر تحميل صورة حرارة سطح كامل البحر. تأكد من وجود tiles/sst_full.png');
   };
   img.src = url;
 }
